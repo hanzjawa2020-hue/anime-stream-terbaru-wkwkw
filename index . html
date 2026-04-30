@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AnimeStream Pro</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+    body{background:#0a0a0a;color:#fff}
+    header{background:#111;padding:12px 16px;position:sticky;top:0;z-index:50;display:flex;gap:12px;align-items:center}
+   .logo{color:#e50914;font-weight:800;font-size:18px}
+    #search{flex:1;padding:10px 14px;border:none;border-radius:8px;background:#222;color:#fff;font-size:15px}
+   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;padding:16px}
+   .card{background:#161616;border-radius:10px;overflow:hidden;cursor:pointer;transition:.2s}
+   .card:hover{transform:scale(1.03);background:#1e1e1e}
+   .card img{width:100%;height:200px;object-fit:cover}
+   .card h3{padding:10px;font-size:13px;line-height:1.3;height:48px;overflow:hidden}
+   .loading{text-align:center;padding:40px;color:#666;grid-column:1/-1}
+   .player{position:fixed;inset:0;background:#000;z-index:100;display:none;flex-direction:column}
+   .player.active{display:flex}
+   .player-top{padding:12px;background:#111;display:flex;justify-content:space-between;align-items:center}
+   .close-btn{background:#e50914;border:none;color:#fff;padding:8px 16px;border-radius:6px;font-weight:600}
+    #videoFrame{width:100%;flex:1;border:none}
+   .ep-list{padding:16px;background:#111;max-height:200px;overflow-y:auto;display:flex;gap:8px;flex-wrap:wrap}
+   .ep-btn{background:#222;border:none;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer}
+   .ep-btn:hover,.ep-btn.active{background:#e50914}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">ANIMESTREAM</div>
+    <input type="text" id="search" placeholder="Cari anime: One Piece, Naruto...">
+  </header>
+
+  <main class="grid" id="animeGrid">
+    <div class="loading">Loading anime populer...</div>
+  </main>
+
+  <div class="player" id="player">
+    <div class="player-top">
+      <div id="playerTitle">Loading...</div>
+      <button class="close-btn" onclick="closePlayer()">Tutup</button>
+    </div>
+    <iframe id="videoFrame" allowfullscreen allow="autoplay"></iframe>
+    <div class="ep-list" id="epList"></div>
+  </div>
+
+  <script>
+    // API ANIMEAPI.SKIN - WORK DI GITHUB PAGES 2026
+    const API = 'https://animeapi.skin/aniwatch';
+    const grid = document.getElementById('animeGrid');
+    const search = document.getElementById('search');
+    const player = document.getElementById('player');
+    const videoFrame = document.getElementById('videoFrame');
+    const epList = document.getElementById('epList');
+    const playerTitle = document.getElementById('playerTitle');
+
+    async function loadPopular() {
+      try {
+        const res = await fetch(`${API}/trending`);
+        const data = await res.json();
+        renderAnime(data);
+      } catch(e) {
+        grid.innerHTML = '<div class="loading">Server animeapi.skin lagi down. Coba refresh 1 menit lagi</div>';
+      }
+    }
+
+    async function searchAnime(query) {
+      if(query.length < 2) return loadPopular();
+      grid.innerHTML = '<div class="loading">Mencari...</div>';
+      try {
+        const res = await fetch(`${API}/search?q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        renderAnime(data);
+      } catch(e) {
+        grid.innerHTML = '<div class="loading">Anime tidak ditemukan</div>';
+      }
+    }
+
+    function renderAnime(animes) {
+      grid.innerHTML = '';
+      if(!animes ||!animes.length) {
+        grid.innerHTML = '<div class="loading">Kosong. Coba kata kunci lain</div>';
+        return;
+      }
+      animes.slice(0,30).forEach(anime => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${anime.poster}" loading="lazy" alt="${anime.name}">
+          <h3>${anime.name}</h3>
+        `;
+        card.onclick = () => getEpisodes(anime.id, anime.name);
+        grid.appendChild(card);
+      });
+    }
+
+    async function getEpisodes(animeId, title) {
+      playerTitle.textContent = title;
+      player.classList.add('active');
+      epList.innerHTML = '<div class="loading">Load episode...</div>';
+      try {
+        const res = await fetch(`${API}/episodes/${animeId}`);
+        const data = await res.json();
+        epList.innerHTML = '';
+        data.episodes.forEach(ep => {
+          const btn = document.createElement('button');
+          btn.className = 'ep-btn';
+          btn.textContent = `EP ${ep.number}`;
+          btn.onclick = () => {
+            document.querySelectorAll('.ep-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            playEpisode(ep.episodeId);
+          };
+          epList.appendChild(btn);
+        });
+        if(data.episodes[0]) {
+          epList.children[0].classList.add('active');
+          playEpisode(data.episodes[0].episodeId);
+        }
+      } catch(e) {
+        epList.innerHTML = '<div class="loading">Gagal load episode</div>';
+      }
+    }
+
+    async function playEpisode(epId) {
+      videoFrame.src = '';
+      try {
+        const res = await fetch(`${API}/episode-srcs?id=${epId}&server=vidstreaming&category=sub`);
+        const data = await res.json();
+        const source = data.sources.find(s => s.quality === '1080p') || data.sources[0];
+        if(source) videoFrame.src = source.url;
+        else throw new Error();
+      } catch(e) {
+        alert('Server lag. Coba ganti episode lain');
+      }
+    }
+
+    function closePlayer() {
+      player.classList.remove('active');
+      videoFrame.src = '';
+    }
+
+    search.addEventListener('input', e => searchAnime(e.target.value));
+    loadPopular();
+  </script>
+</body>
+</html>
