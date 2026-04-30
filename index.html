@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanAnim - 100 API + Filter</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:'Segoe UI',sans-serif;
+    background:url('https://w.wallhaven.cc/full/9m/wallhaven-9m2o2k.jpg') center/cover fixed;
+    color:#fff;min-height:100vh
+  }
+  body::before{content:'';position:fixed;inset:0;background:rgba(10,10,25,0.88);backdrop-filter:blur(10px);z-index:-1}
+  .container{max-width:1400px;margin:0 auto;padding:40px 20px}
+  header{text-align:center;margin-bottom:30px}
+  h1{font-size:52px;font-weight:700;background:linear-gradient(135deg,#d4af37,#ffd700,#f7e7ce);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:3px;filter:drop-shadow(0 0 20px rgba(212,175,55,0.4))}
+  .subtitle{color:#c9a961;margin-top:12px;font-size:14px;letter-spacing:4px}
+  .filter-box{margin:30px auto;max-width:900px;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:15px}
+  .filter-box input,.filter-box select{width:100%;padding:14px 16px;background:rgba(20,20,35,0.8);border:2px solid rgba(212,175,55,0.3);border-radius:10px;color:#fff;font-size:14px;backdrop-filter:blur(12px)}
+  .filter-box input:focus,.filter-box select:focus{outline:none;border-color:#d4af37;box-shadow:0 0 20px rgba(212,175,55,0.3)}
+  .filter-box select option{background:#1a1a2e;color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px;margin-top:30px}
+  .card{background:linear-gradient(135deg,rgba(30,30,50,0.7),rgba(20,20,35,0.7));border:1px solid rgba(212,175,55,0.15);border-radius:14px;overflow:hidden;transition:.4s;backdrop-filter:blur(12px);cursor:pointer}
+  .card:hover{transform:translateY(-10px) scale(1.02);border-color:#d4af37;box-shadow:0 25px 50px rgba(212,175,55,0.25)}
+  .img-wrap{position:relative}
+  .card img{width:100%;height:280px;object-fit:cover}
+  .play-icon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:50px;color:#d4af37;opacity:0;background:rgba(0,0,0,0.7);border-radius:50%;width:80px;height:80px;display:flex;align-items:center;justify-content:center;transition:.3s}
+  .card:hover .play-icon{opacity:1}
+  .card h3{padding:14px;font-size:14px;font-weight:500;color:#f0f0f0;line-height:1.4}
+  .score{position:absolute;top:10px;right:10px;background:#d4af37;color:#000;padding:4px 8px;border-radius:6px;font-size:12px;font-weight:700}
+  .episodes{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);color:#d4af37;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600}
+  .type{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,0.7);color:#00aeec;padding:4px 8px;border-radius:6px;font-size:11px;font-weight:600}
+  .loading{text-align:center;padding:80px;font-size:18px;color:#d4af37}
+  .error{text-align:center;padding:60px;color:#ff6b6b}
+  .total{color:#c9a961;text-align:center;margin:20px 0;font-size:14px}
+  .progress{width:100%;height:4px;background:rgba(212,175,55,0.2);border-radius:2px;margin:20px 0;overflow:hidden}
+  .progress-bar{height:100%;background:#d4af37;width:0%;transition:.3s}
+  @media(max-width:768px){.filter-box{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>HanAnim</h1>
+    <p class="subtitle">100 API + FILTER LENGKAP - TAP UNTUK NONTON</p>
+    <div class="filter-box">
+      <input type="text" id="searchInput" placeholder="🔍 Cari judul anime..." onkeyup="applyFilter()">
+      <select id="genreFilter" onchange="applyFilter()">
+        <option value="">Semua Genre</option>
+        <option value="Action">Action</option>
+        <option value="Adventure">Adventure</option>
+        <option value="Comedy">Comedy</option>
+        <option value="Drama">Drama</option>
+        <option value="Fantasy">Fantasy</option>
+        <option value="Horror">Horror</option>
+        <option value="Romance">Romance</option>
+        <option value="Sci-Fi">Sci-Fi</option>
+        <option value="Slice of Life">Slice of Life</option>
+        <option value="Sports">Sports</option>
+        <option value="Supernatural">Supernatural</option>
+      </select>
+      <select id="yearFilter" onchange="applyFilter()">
+        <option value="">Semua Tahun</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+        <option value="2023">2023</option>
+        <option value="2022">2022</option>
+        <option value="2021">2021</option>
+        <option value="2020">2020</option>
+        <option value="2019">2019</option>
+      </select>
+      <select id="statusFilter" onchange="applyFilter()">
+        <option value="">Semua Status</option>
+        <option value="Airing">Ongoing</option>
+        <option value="Complete">Tamat</option>
+        <option value="Upcoming">Upcoming</option>
+      </select>
+    </div>
+  </header>
+  <div id="totalAnime" class="total"></div>
+  <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+  <div id="content"><div class="loading">Memuat 100 sumber anime... Sabar 30 detik cuy</div></div>
+</div>
+
+<script>
+const APIS = [
+  'https://api.jikan.moe/v4/top/anime?limit=25','https://api.jikan.moe/v4/anime?order_by=popularity&limit=25','https://api.jikan.moe/v4/anime?order_by=score&limit=25','https://api.jikan.moe/v4/anime?order_by=favorites&limit=25','https://api.jikan.moe/v4/anime?order_by=rank&limit=25',
+  'https://api.jikan.moe/v4/season/now?limit=25','https://api.jikan.moe/v4/season/upcoming?limit=25',
+  'https://api.jikan.moe/v4/season/2025/summer?limit=25','https://api.jikan.moe/v4/season/2025/spring?limit=25','https://api.jikan.moe/v4/season/2025/winter?limit=25','https://api.jikan.moe/v4/season/2024/fall?limit=25','https://api.jikan.moe/v4/season/2024/summer?limit=25','https://api.jikan.moe/v4/season/2024/spring?limit=25','https://api.jikan.moe/v4/season/2024/winter?limit=25','https://api.jikan.moe/v4/season/2023/fall?limit=25','https://api.jikan.moe/v4/season/2023/summer?limit=25','https://api.jikan.moe/v4/season/2023/spring?limit=25','https://api.jikan.moe/v4/season/2023/winter?limit=25','https://api.jikan.moe/v4/season/2022/fall?limit=25','https://api.jikan.moe/v4/season/2022/summer?limit=25','https://api.jikan.moe/v4/season/2022/spring?limit=25','https://api.jikan.moe/v4/season/2022/winter?limit=25','https://api.jikan.moe/v4/season/2021/fall?limit=25','https://api.jikan.moe/v4/season/2021/summer?limit=25','https://api.jikan.moe/v4/season/2021/spring?limit=25','https://api.jikan.moe/v4/season/2021/winter?limit=25','https://api.jikan.moe/v4/season/2020/fall?limit=25','https://api.jikan.moe/v4/season/2020/summer?limit=25','https://api.jikan.moe/v4/season/2020/spring?limit=25','https://api.jikan.moe/v4/season/2020/winter?limit=25','https://api.jikan.moe/v4/season/2019/fall?limit=25','https://api.jikan.moe/v4/season/2019/summer?limit=25','https://api.jikan.moe/v4/season/2019/spring?limit=25','https://api.jikan.moe/v4/season/2019/winter?limit=25',
+  'https://api.jikan.moe/v4/anime?status=airing&limit=25','https://api.jikan.moe/v4/anime?status=complete&limit=25','https://api.jikan.moe/v4/anime?status=upcoming&limit=25',
+  'https://api.jikan.moe/v4/anime?type=tv&limit=25','https://api.jikan.moe/v4/anime?type=movie&limit=25','https://api.jikan.moe/v4/anime?type=ova&limit=25','https://api.jikan.moe/v4/anime?type=special&limit=25','https://api.jikan.moe/v4/anime?type=ona&limit=25',
+  'https://api.jikan.moe/v4/anime?rating=g&limit=25','https://api.jikan.moe/v4/anime?rating=pg&limit=25','https://api.jikan.moe/v4/anime?rating=pg13&limit=25','https://api.jikan.moe/v4/anime?rating=r17&limit=25',
+  'https://api.jikan.moe/v4/anime?genres=1&limit=25','https://api.jikan.moe/v4/anime?genres=2&limit=25','https://api.jikan.moe/v4/anime?genres=3&limit=25','https://api.jikan.moe/v4/anime?genres=4&limit=25','https://api.jikan.moe/v4/anime?genres=5&limit=25','https://api.jikan.moe/v4/anime?genres=6&limit=25','https://api.jikan.moe/v4/anime?genres=7&limit=25','https://api.jikan.moe/v4/anime?genres=8&limit=25','https://api.jikan.moe/v4/anime?genres=9&limit=25','https://api.jikan.moe/v4/anime?genres=10&limit=25','https://api.jikan.moe/v4/anime?genres=11&limit=25','https://api.jikan.moe/v4/anime?genres=12&limit=25','https://api.jikan.moe/v4/anime?genres=13&limit=25','https://api.jikan.moe/v4/anime?genres=14&limit=25','https://api.jikan.moe/v4/anime?genres=15&limit=25','https://api.jikan.moe/v4/anime?genres=16&limit=25','https://api.jikan.moe/v4/anime?genres=17&limit=25','https://api.jikan.moe/v4/anime?genres=18&limit=25','https://api.jikan.moe/v4/anime?genres=19&limit=25','https://api.jikan.moe/v4/anime?genres=20&limit=25','https://api.jikan.moe/v4/anime?genres=21&limit=25','https://api.jikan.moe/v4/anime?genres=22&limit=25','https://api.jikan.moe/v4/anime?genres=23&limit=25','https://api.jikan.moe/v4/anime?genres=24&limit=25','https://api.jikan.moe/v4/anime?genres=25&limit=25','https://api.jikan.moe/v4/anime?genres=26&limit=25','https://api.jikan.moe/v4/anime?genres=27&limit=25','https://api.jikan.moe/v4/anime?genres=28&limit=25','https://api.jikan.moe/v4/anime?genres=29&limit=25','https://api.jikan.moe/v4/anime?genres=30&limit=25','https://api.jikan.moe/v4/anime?genres=31&limit=25','https://api.jikan.moe/v4/anime?genres=32&limit=25','https://api.jikan.moe/v4/anime?genres=35&limit=25','https://api.jikan.moe/v4/anime?genres=36&limit=25','https://api.jikan.moe/v4/anime?genres=37&limit=25','https://api.jikan.moe/v4/anime?genres=38&limit=25','https://api.jikan.moe/v4/anime?genres=39&limit=25','https://api.jikan.moe/v4/anime?genres=40&limit=25','https://api.jikan.moe/v4/anime?genres=41&limit=25','https://api.jikan.moe/v4/anime?genres=42&limit=25','https://api.jikan.moe/v4/anime?genres=43&limit=25','https://api.jikan.moe/v4/anime?genres=44&limit=25','https://api.jikan.moe/v4/anime?genres=45&limit=25','https://api.jikan.moe/v4/anime?genres=46&limit=25','https://api.jikan.moe/v4/anime?genres=47&limit=25','https://api.jikan.moe/v4/anime?genres=48&limit=25','https://api.jikan.moe/v4/anime?genres=49&limit=25','https://api.jikan.moe/v4/anime?genres=50&limit=25','https://api.jikan.moe/v4/anime?genres=51&limit=25','https://api.jikan.moe/v4/anime?genres=52&limit=25','https://api.jikan.moe/v4/anime?genres=53&limit=25','https://api.jikan.moe/v4/anime?genres=54&limit=25','https://api.jikan.moe/v4/anime?genres=55&limit=25','https://api.jikan.moe/v4/anime?genres=56&limit=25','https://api.jikan.moe/v4/anime?genres=57&limit=25','https://api.jikan.moe/v4/anime?genres=58&limit=25','https://api.jikan.moe/v4/anime?genres=59&limit=25','https://api.jikan.moe/v4/anime?genres=60&limit=25','https://api.jikan.moe/v4/anime?genres=61&limit=25','https://api.jikan.moe/v4/anime?genres=62&limit=25'
+];
+
+let allAnime = [];
+
+async function tryFetch(urls){
+  let result = [];
+  let loaded = 0;
+  for(const url of urls){
+    try{
+      const res = await fetch(url);
+      if(res.ok){
+        const data = await res.json();
+        if(data.data && data.data.length > 0) result = result.concat(data.data);
+      }
+      loaded++;
+      document.getElementById('progressBar').style.width = `${(loaded/urls.length)*100}%`;
+      await new Promise(r=>setTimeout(r,400));
+    }catch(e){continue}
+  }
+  return result;
+}
+
+async function load(){
+  const data = await tryFetch(APIS);
+  if(data.length === 0){
+    document.getElementById('content').innerHTML='<div class="error">100 API gagal. Coba refresh</div>';
+    return;
+  }
+  allAnime = [...new Map(data.map(i=>[i.mal_id,i])).values()];
+  document.getElementById('totalAnime').innerHTML = `✅ Total ${allAnime.length} Anime dari 100 API Loaded`;
+  renderAnime(allAnime);
+}
+
+function renderAnime(list){
+  const html = `<div class="grid">${list.slice(0,1000).map(a=>`
+    <div class="card" onclick="bukaAnime('${a.title.replace(/'/g,"\\'")}','${a.trailer?.youtube_id||''}','${a.episodes||'?'}','${a.type||''}')">
+      <div class="img-wrap">
+        <img src="${a.images?.jpg?.large_image_url||a.images?.jpg?.image_url}" loading="lazy">
+        ${a.score ? `<div class="score">★ ${a.score}</div>` : ''}
+        ${a.episodes ? `<div class="episodes">${a.episodes} Eps</div>` : ''}
+        ${a.type ? `<div class="type">${a.type}</div>` : ''}
+        <div class="play-icon">▶</div>
+      </div>
+      <h3>${a.title||a.title_english}</h3>
+    </div>`).join('')}</div>`;
+  document.getElementById('content').innerHTML = html;
+}
+
+function bukaAnime(title, ytId, eps, type){
+  const modal = document.createElement('div');
+  modal.style.cssText=`position:fixed;inset:0;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(20px);padding:20px`;
+  
+  modal.innerHTML = `
+    <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);padding:30px;border:2px solid #d4af37;border-radius:16px;text-align:center;max-width:450px;width:100%">
+      <h2 style="color:#d4af37;margin-bottom:8px;font-size:20px">${title}</h2>
+      <p style="color:#c9a961;margin-bottom:20px;font-size:12px">${type} | ${eps} Episodes | PILIH TEMPAT NONTON:</p>
+      ${ytId ? `<button onclick="window.open('https://www.youtube.com/watch?v=${ytId}','_blank')" style="display:block;width:100%;padding:15px;margin:10px 0;background:#d4af37;color:#000;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">▶ TRAILER YOUTUBE</button>` : ''}
+      <button onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(title + ' Samehadaku episode 1 sub indo')}','_blank')" style="display:block;width:100%;padding:15px;margin:10px 0;background:#ff6b6b;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">🔥 SAMEHADAKU</button>
+      <button onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(title + ' otakudesu')}','_blank')" style="display:block;width:100%;padding:15px;margin:10px 0;background:#9c27b0;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">🔥 OTAKUDESU</button>
+      <button onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(title + ' anoboy')}','_blank')" style="display:block;width:100%;padding:15px;margin:10px 0;background:#ff9800;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">🔥 ANOBOY</button>
+      <button onclick="window.open('https://www.bilibili.tv/id/search-result?q=${encodeURIComponent(title)}','_blank')" style="display:block;width:100%;padding:15px;margin:10px 0;background:#00aeec;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">✅ BSTATION LEGAL</button>
+      <button onclick="window.open('https://www.iq.com/search?query=${encodeURIComponent(title)}','_blank')" style="display:block;width:100%;padding:15px;margin:10px 0;background:#00d563;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px">✅ iQIYI LEGAL</button>
+      <button onclick="this.parentElement.parentElement.remove()" style="margin-top:20px;background:transparent;border:1px solid #d4af37;color:#d4af37;padding:12px 30px;border-radius:8px;cursor:pointer">Tutup</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function applyFilter(){
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  const genre = document.getElementById('genreFilter').value;
+  const year = document.getElementById('yearFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  
+  let filtered = allAnime;
+  
+  if(query){
+    filtered = filtered.filter(a => 
+      a.title?.toLowerCase().includes(query) || 
+      a.title_english?.toLowerCase().includes(query)
+    );
+  }
+  
+  if(genre){
+    filtered = filtered.filter(a => 
+      a.genres?.some(g => g.name === genre)
+    );
+  }
+  
+  if(year){
+    filtered = filtered.filter(a => 
+      a.aired?.prop?.from?.year == year
+    );
+  }
+  
+  if(status){
+    filtered = filtered.filter(a => a.status === status);
+  }
+  
+  document.getElementById('totalAnime').innerHTML = `🔍 Ditemukan ${filtered.length} anime`;
+  renderAnime(filtered);
+}
+
+load();
+</script>
+</body>
+</html>
