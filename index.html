@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>baca manga aja</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { background: #0a0a0a; color: #fff; }
+    header { background: #1f1f1f; padding: 15px; position: sticky; top: 0; z-index: 100; text-align: center; }
+.container { max-width: 1200px; margin: auto; padding: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+.card { background: #1f1f1f; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.2s; }
+.card:hover { transform: scale(1.05); }
+.card img { width: 100%; height: 220px; object-fit: cover; background: #333; }
+.card h3 { font-size: 13px; padding: 8px; height: 48px; overflow: hidden; }
+    #loader { text-align: center; padding: 40px; font-size: 18px; }
+.modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
+.modal-content { background: #121212; margin: 20px auto; max-width: 900px; border-radius: 10px; }
+.modal-header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #121212; z-index: 10; }
+.close { font-size: 30px; cursor: pointer; }
+.detail-info { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
+.detail-info img { width: 200px; border-radius: 8px; background: #333; }
+.chapter-list { padding: 0 20px 20px; max-height: 400px; overflow-y: auto; }
+.chapter-item { padding: 12px; background: #1f1f1f; margin-bottom: 8px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; }
+.chapter-item:hover { background: #333; }
+.chapter-item span { font-size: 11px; background: #ff4500; padding: 2px 6px; border-radius: 3px; }
+    #reader { background: #000; padding: 10px 0; text-align: center; }
+    #reader img { max-width: 100%; margin-bottom: 3px; background: #111; min-height: 200px; }
+.btn { background: #ff4500; border: none; padding: 10px 15px; border-radius: 5px; color: #fff; cursor: pointer; margin: 5px; }
+.reader-controls { display: flex; justify-content: center; gap: 10px; padding: 15px; flex-wrap: wrap; position: sticky; top: 0; background: #121212; z-index: 50; }
+    #search { width: 100%; padding: 12px; margin-bottom: 20px; background: #333; border: none; border-radius: 5px; color: #fff; font-size: 16px; }
+.error { color: #ff5555; text-align: center; padding: 20px; line-height: 1.6; }
+.status { color: #00c853; text-align: center; padding: 10px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header><h2>baca manga aja</h2></header>
+
+  <div class="container">
+    <input type="text" id="search" placeholder="Cari manga... Enter untuk cari">
+    <div id="status" class="status"></div>
+    <div id="loader">Loading...</div>
+    <div class="grid" id="mangaGrid"></div>
+  </div>
+
+  <div id="detailModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="detailTitle"></h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <div id="readerModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="readerTitle"></h2>
+        <span class="close" onclick="closeReader()">&times;</span>
+      </div>
+      <div class="reader-controls">
+        <button class="btn" onclick="prevChapter()">← Prev</button>
+        <button class="btn" onclick="backToChapter()">Daftar Chapter</button>
+        <button class="btn" onclick="nextChapter()">Next →</button>
+      </div>
+      <div id="reader"></div>
+    </div>
+  </div>
+
+<script>
+// 15 PROXY API - UDAH PALING BANYAK YG MASIH AKTIF
+const API_PROXIES = [
+  'https://api.codetabs.com/v1/proxy?quest=',
+  'https://corsproxy.io/?',
+  'https://thingproxy.freeboard.io/fetch/',
+  'https://cors.eu.org/',
+  'https://api.allorigins.win/raw?url=',
+  'https://yacdn.org/proxy/',
+  'https://proxy.cors.sh/',
+  'https://cors-anywhere.herokuapp.com/',
+  'https://crossorigin.me/',
+  'https://gobetween.oklabs.org/',
+  'https://jsonp.afeld.me/?url=',
+  'https://cors-proxy.htmldriven.com/?url=',
+  'https://secret-ocean-49799.herokuapp.com/',
+  'https://nodetestjsonp.herokuapp.com/?url=',
+  'https://catcors.herokuapp.com/'
+];
+
+// 50 PROXY GAMBAR - CAMPURAN WESERV, WP, STATICS, CLOUDFLARE, DLL
+const IMG_PROXIES = [
+  'https://wsrv.nl/?url=', 'https://images.weserv.nl/?url=',
+  'https://i0.wp.com/', 'https://i1.wp.com/', 'https://i2.wp.com/', 'https://i3.wp.com/',
+  'https://cdn.statically.io/img/', 'https://imagecdn.app/v1/image/',
+  'https://images1.focus-english.com/unsafe/', 'https://images2.focus-english.com/unsafe/',
+  'https://images3.focus-english.com/unsafe/', 'https://img.youtube.com.vi/',
+  'https://pic.clubic.com/v1/images/', 'https://resizer.otstatic.com/v2/photos/',
+  'https://imgproxy.ra.cool/', 'https://images.prismic.io/',
+  'https://images.unsplash.com.weserv.nl/?url=',
+  'https://cloudflare-ipfs.com/ipfs/',
+  'https://cdn.sanity.io/images/',
+  'https://images.ctfassets.net/', 'https://media.graphassets.com/',
+  'https://img.freepik.com.weserv.nl/?url=',
+  'https://cdn.jsdelivr.net/gh/', 'https://fastly.jsdelivr.net/gh/',
+  'https://gcore.jsdelivr.net/gh/', 'https://testingcf.jsdelivr.net/gh/',
+  'https://quantil.jsdelivr.net/gh/', 'https://originfastly.jsdelivr.net/gh/',
+  'https://cdn.shopify.com.weserv.nl/?url=',
+  'https://ik.imagekit.io/demo/', 'https://cdn.pixabay.com/photo/',
+  'https://cdn.discordapp.com/attachments/',
+  'https://media.discordapp.net/attachments/',
+  'https://images-ext-1.discordapp.net/external/',
+  'https://images-ext-2.discordapp.net/external/',
+  'https://proxy.duckduckgo.com/iu/?u=',
+  'https://external-content.duckduckgo.com/iu/?u=',
+  'https://t0.gstatic.com/images?q=tbn:',
+  'https://t1.gstatic.com/images?q=tbn:',
+  'https://t2.gstatic.com/images?q=tbn:',
+  'https://t3.gstatic.com/images?q=tbn:',
+  'https://images4.alphacoders.com/', 'https://images5.alphacoders.com/',
+  'https://images6.alphacoders.com/', 'https://images7.alphacoders.com/',
+  'https://img2.storyblok.com/', 'https://a.storyblok.com/',
+  'https://assets.imgix.net/', 'https://images.ctfassets.net/'
+];
+
+const mangaGrid = document.getElementById('mangaGrid');
+const loader = document.getElementById('loader');
+const statusDiv = document.getElementById('status');
+let currentChapterList = [];
+let currentChapterIndex = 0;
+let currentApiProxyIndex = 0;
+
+function updateStatus(msg) {
+  statusDiv.innerText = msg;
+}
+
+async function fetchWithRotatingProxy(url) {
+  for (let i = 0; i < API_PROXIES.length; i++) {
+    const proxyIndex = (currentApiProxyIndex + i) % API_PROXIES.length;
+    try {
+      updateStatus(`Coba API server ${proxyIndex + 1}/${API_PROXIES.length}...`);
+      const res = await fetch(API_PROXIES[proxyIndex] + encodeURIComponent(url), { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        currentApiProxyIndex = proxyIndex;
+        updateStatus(`API Berhasil pake server ${proxyIndex + 1}`);
+        return res;
+      }
+    } catch (e) {}
+  }
+  throw new Error('15 server API mati semua. Wajib VPN.');
+}
+
+async function loadImageWith50Proxies(url) {
+  for (let i = 0; i < IMG_PROXIES.length; i++) {
+    try {
+      let finalUrl = IMG_PROXIES[i];
+      if (finalUrl.includes('wp.com')) {
+        finalUrl += url.replace(/^https?:\/\//, '');
+      } else if (finalUrl.includes('statically.io')) {
+        finalUrl += url;
+      } else {
+        finalUrl += encodeURIComponent(url);
+      }
+
+      const res = await fetch(finalUrl, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const blob = await res.blob();
+        return URL.createObjectURL(blob);
+      }
+    } catch (e) {
+      updateStatus(`Gambar proxy ${i+1}/50 gagal, coba lagi...`);
+    }
+  }
+  return null;
+}
+
+async function loadManga(title = '') {
+  try {
+    loader.style.display = 'block';
+    loader.innerText = 'Mencari server tercepat...';
+    mangaGrid.innerHTML = '';
+
+    let apiUrl = 'https://api.mangadex.org/manga?limit=20&includes[]=cover_art&availableTranslatedLanguage[]=id&availableTranslatedLanguage[]=en&order[followedCount]=desc&contentRating[]=safe&contentRating[]=suggestive';
+    if (title) apiUrl = `https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&limit=20&includes[]=cover_art&availableTranslatedLanguage[]=id&availableTranslatedLanguage[]=en`;
+
+    const res = await fetchWithRotatingProxy(apiUrl);
+    const data = await res.json();
+    if (!data.data || data.data.length === 0) throw new Error('Manga tidak ditemukan');
+
+    loader.innerText = 'Loading gambar cover dari 50 server...';
+    const results = [];
+
+    for (const m of data.data) {
+      try {
+        const cover = m.relationships.find(r => r.type === 'cover_art');
+        if (!cover?.attributes?.fileName) continue;
+        const title = m.attributes.title.en || m.attributes.title['ja-ro'] || m.attributes.title.ja || Object.values(m.attributes.title)[0] || 'No Title';
+        const desc = m.attributes.description.en || m.attributes.description.id || '';
+        const coverUrl = `https://uploads.mangadex.org/covers/${m.id}/${cover.attributes.fileName}.256.jpg`;
+
+        updateStatus(`Load cover: ${title.substring(0,20)}...`);
+        const blobUrl = await loadImageWith50Proxies(coverUrl);
+
+        results.push({
+          id: m.id,
+          title: title,
+          cover: blobUrl || 'https://via.placeholder.com/160x220/333/fff?text=Blocked',
+          desc: desc
+        });
+        renderManga(results);
+      } catch (e) {}
+    }
+
+    if (results.length === 0) throw new Error('Gagal load semua 50 proxy gambar');
+    loader.style.display = 'none';
+    statusDiv.innerText = `Loaded ${results.length} manga`;
+  } catch (e) {
+    loader.innerHTML = `<div class="error"><b>BLOKIR LEVEL FINAL BOSS</b><br>${e.message}<br><br><b>Udah nggak ada cara lain selain:</b><br>1. Install '1.1.1.1' di Play Store<br>2. Nyalain VPN nya<br>3. Refresh halaman ini<br><br>50 proxy mati = provider kamu brutal.</div>`;
+  }
+}
+
+function renderManga(list) {
+  mangaGrid.innerHTML = '';
+  list.forEach((m) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${m.cover}" loading="lazy">
+      <h3>${m.title}</h3>
+    `;
+    card.onclick = () => openDetail(m);
+    mangaGrid.appendChild(card);
+  });
+}
+
+async function openDetail(manga) {
+  document.getElementById('detailTitle').innerText = manga.title;
+  document.getElementById('detailModal').style.display = 'block';
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-info">
+      <img src="${manga.cover}">
+      <div>
+        <p><b>Source:</b> MangaDex</p>
+        <p style="margin-top:10px">${manga.desc? manga.desc.substring(0,300).replace(/<[^>]*>/g, '') + '...' : 'No description'}</p>
+      </div>
+    <div class="chapter-list" id="chapterList"><p>Loading chapter...</p></div>
+  `;
+  await loadChapters(manga.id);
+}
+
+async function loadChapters(mangaId) {
+  try {
+    const url = `https://api.mangadex.org/manga/${mangaId}/feed?translatedLanguage[]=id&translatedLanguage[]=en&order[chapter]=desc&limit=500`;
+    const res = await fetchWithRotatingProxy(url);
+    const data = await res.json();
+    if (!data.data || data.data.length === 0) throw new Error('No chapter');
+
+    currentChapterList = data.data.map(ch => ({
+      id: ch.id,
+      chapter: ch.attributes.chapter || 'Oneshot',
+      title: ch.attributes.title || '',
+      lang: ch.attributes.translatedLanguage
+    }));
+
+    let chapHtml = '<h3>Pilih Chapter</h3>';
+    currentChapterList.forEach((ch, idx) => {
+      chapHtml += `<div class="chapter-item" onclick="openReader(${idx})">
+        <div>Ch. ${ch.chapter} ${ch.title}</div>
+        <span>${ch.lang.toUpperCase()}</span>
+      </div>`;
+    });
+    document.getElementById('chapterList').innerHTML = chapHtml;
+  } catch(e) {
+    document.getElementById('chapterList').innerHTML = '<p>Gagal load chapter.</p>';
+  }
+}
+
+async function openReader(index) {
+  currentChapterIndex = index;
+  const ch = currentChapterList[index];
+  document.getElementById('detailModal').style.display = 'none';
+  document.getElementById('readerModal').style.display = 'block';
+  document.getElementById('readerTitle').innerText = `Ch. ${ch.chapter} - ${ch.title}`;
+  document.getElementById('reader').innerHTML = '<p style="padding:40px">Loading gambar dari 50 server...</p>';
+
+  try {
+    const url = `https://api.mangadex.org/at-home/server/${ch.id}`;
+    const res = await fetchWithRotatingProxy(url);
+    const data = await res.json();
+
+    const pages = data.chapter.dataSaver;
+    const hash = data.chapter.hash;
+    const baseUrl = data.baseUrl;
+
+    let imgHtml = '';
+    for (let i = 0; i < pages.length; i++) {
+      const imgUrl = `${baseUrl}/data-saver/${hash}/${pages[i]}`;
+      updateStatus(`Load hal ${i+1}/${pages.length} via 50 proxy...`);
+      const blobUrl = await loadImageWith50Proxies(imgUrl);
+      if (blobUrl) {
+        imgHtml += `<img src="${blobUrl}" loading="lazy">`;
+      }
+    }
+    document.getElementById('reader').innerHTML = imgHtml || '<p>Gagal load. VPN wajib.</p>';
+    window.scrollTo(0, 0);
+    statusDiv.innerText = '';
+  } catch(e) {
+    document.getElementById('reader').innerHTML = '<p style="padding:40px">Gagal total. Nyalain VPN 1.1.1.1</p>';
+  }
+}
+
+function prevChapter() { if(currentChapterIndex > 0) openReader(currentChapterIndex - 1); }
+function nextChapter() { if(currentChapterIndex < currentChapterList.length - 1) openReader(currentChapterIndex + 1); }
+function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+function closeReader() { document.getElementById('readerModal').style.display = 'none'; document.getElementById('reader').innerHTML = ''; }
+function backToChapter() { document.getElementById('readerModal').style.display = 'none'; document.getElementById('detailModal').style.display = 'block'; }
+
+document.getElementById('search').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') loadManga(e.target.value);
+});
+
+loadManga();
+</script>
+</body>
+</html>
