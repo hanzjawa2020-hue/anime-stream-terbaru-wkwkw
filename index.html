@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>baca manga aja - SPEED HACK</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { background: #0a0a0a; color: #fff; }
+    header { background: #1f1f1f; padding: 15px; position: sticky; top: 0; z-index: 100; text-align: center; }
+.container { max-width: 1200px; margin: auto; padding: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+.card { background: #1f1f1f; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.2s; }
+.card:hover { transform: scale(1.05); }
+.card img { width: 100%; height: 220px; object-fit: cover; background: #333; }
+.card h3 { font-size: 13px; padding: 8px; height: 48px; overflow: hidden; }
+    #loader { text-align: center; padding: 40px; font-size: 18px; }
+.modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
+.modal-content { background: #121212; margin: 20px auto; max-width: 900px; border-radius: 10px; }
+.modal-header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #121212; z-index: 10; }
+.close { font-size: 30px; cursor: pointer; }
+.detail-info { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
+.detail-info img { width: 200px; border-radius: 8px; background: #333; }
+.chapter-list { padding: 0 20px 20px; max-height: 400px; overflow-y: auto; }
+.chapter-item { padding: 12px; background: #1f1f1f; margin-bottom: 8px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; }
+.chapter-item:hover { background: #333; }
+.chapter-item span { font-size: 11px; background: #ff4500; padding: 2px 6px; border-radius: 3px; }
+    #reader { background: #000; padding: 10px 0; text-align: center; min-height: 100vh; }
+    #reader img { max-width: 100%; margin-bottom: 3px; background: #111; min-height: 200px; display: block; margin-left: auto; margin-right: auto; }
+.btn { background: #ff4500; border: none; padding: 10px 15px; border-radius: 5px; color: #fff; cursor: pointer; margin: 5px; }
+.reader-controls { display: flex; justify-content: center; gap: 10px; padding: 15px; flex-wrap: wrap; position: sticky; top: 0; background: #121212; z-index: 50; }
+    #search { width: 100%; padding: 12px; margin-bottom: 20px; background: #333; border: none; border-radius: 5px; color: #fff; font-size: 16px; }
+.error { color: #ff5555; text-align: center; padding: 20px; line-height: 1.6; }
+.status { color: #00c853; text-align: center; padding: 10px; font-size: 11px; }
+.vpn-box { background: #ff4500; padding: 15px; margin: 10px 0; border-radius: 5px; text-align: center; display: none; }
+.speed-toggle { background: #00c853; }
+  </style>
+</head>
+<body>
+  <header><h2>baca manga aja - SPEED HACK</h2></header>
+
+  <div class="container">
+    <div id="vpnBox" class="vpn-box">
+      <b>SEMUA PROXY MATI!</b><br>Pilih VPN cadangan di bawah:
+      <div id="vpnButtons" style="margin-top:10px"></div>
+    </div>
+    <input type="text" id="search" placeholder="Cari manga... Enter untuk cari">
+    <div id="status" class="status"></div>
+    <div id="loader">Loading...</div>
+    <div class="grid" id="mangaGrid"></div>
+  </div>
+
+  <div id="detailModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="detailTitle"></h2>
+        <span class="close" onclick="closeModal()">&times;</span>
+      </div>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <div id="readerModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="readerTitle"></h2>
+        <span class="close" onclick="closeReader()">&times;</span>
+      </div>
+      <div class="reader-controls">
+        <button class="btn" onclick="prevChapter()">← Prev</button>
+        <button class="btn speed-toggle" onclick="togglePreload()">Preload: ON</button>
+        <button class="btn" onclick="backToChapter()">Daftar Chapter</button>
+        <button class="btn" onclick="nextChapter()">Next →</button>
+      </div>
+      <div id="reader"></div>
+    </div>
+  </div>
+
+<script>
+// PROXY DIURUTIN DARI YANG PALING CEPET BERDASARKAN TEST
+const API_PROXIES = [
+  'https://api.codetabs.com/v1/proxy?quest=','https://corsproxy.io/?','https://cors.eu.org/',
+  'https://api.allorigins.win/raw?url=','https://yacdn.org/proxy/','https://proxy.cors.sh/',
+  'https://cors.bridged.cc/','https://cors-bypass.vercel.app/api?url=','https://test.cors.workers.dev/?',
+  'https://cf-proxy.maxis4785.workers.dev/?url='
+];
+
+// 20 PROXY GAMBAR PALING KENCENG. KALO INI MATI SEMUA = PAKSA VPN
+const IMG_PROXIES = [
+  'https://wsrv.nl/?url=','https://images.weserv.nl/?url=','https://i0.wp.com/','https://i1.wp.com/',
+  'https://i2.wp.com/','https://i3.wp.com/','https://cdn.statically.io/img/','https://imagecdn.app/v1/image/',
+  'https://images1.focus-english.com/unsafe/','https://images2.focus-english.com/unsafe/',
+  'https://cloudflare-ipfs.com/ipfs/','https://cdn.jsdelivr.net/gh/','https://fastly.jsdelivr.net/gh/',
+  'https://gcore.jsdelivr.net/gh/','https://cdn.shopify.com.weserv.nl/?url=',
+  'https://cdn.discordapp.com/attachments/','https://media.discordapp.net/attachments/',
+  'https://proxy.duckduckgo.com/iu/?u=','https://t0.gstatic.com/images?q=tbn:','https://t1.gstatic.com/images?q=tbn:'
+];
+
+const VPN_SERVERS = [
+  'https://vpn1.antiblokir.workers.dev/?url=','https://vpn2.tembus.workers.dev/?url=',
+  'https://vpn3.bebasblokir.workers.dev/?url=','https://vpn4.lancarjaya.workers.dev/?url=',
+  'https://vpn5.antibanned.workers.dev/?url='
+];
+
+const mangaGrid = document.getElementById('mangaGrid');
+const loader = document.getElementById('loader');
+const statusDiv = document.getElementById('status');
+const vpnBox = document.getElementById('vpnBox');
+const vpnButtons = document.getElementById('vpnButtons');
+let currentChapterList = [];
+let currentChapterIndex = 0;
+let currentApiProxyIndex = 0;
+let currentVPNIndex = -1;
+// CACHE PROXY YANG UDAH TERBUKTI BERHASIL
+let WORKING_IMG_PROXY = null;
+let WORKING_API_PROXY = null;
+let preloadEnabled = true;
+
+function updateStatus(msg) { statusDiv.innerText = msg; }
+function togglePreload() {
+  preloadEnabled =!preloadEnabled;
+  document.querySelector('.speed-toggle').innerText = `Preload: ${preloadEnabled? 'ON' : 'OFF'}`;
+}
+
+VPN_SERVERS.forEach((vpn, idx) => {
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.style.background = '#000';
+  btn.style.margin = '3px';
+  btn.style.fontSize = '10px';
+  btn.innerText = `VPN ${idx+1}`;
+  btn.onclick = () => enableVPN(idx);
+  vpnButtons.appendChild(btn);
+});
+
+function enableVPN(idx) {
+  currentVPNIndex = idx;
+  WORKING_IMG_PROXY = null;
+  WORKING_API_PROXY = null;
+  vpnBox.style.display = 'none';
+  updateStatus(`VPN ${idx+1} Aktif! Reload...`);
+  loadManga();
+}
+
+// SPEED HACK 1: LANGSUNG PAKE PROXY YANG UDAH TERBUKTI BERHASIL
+async function fastFetch(url, isImage = false) {
+  const proxyList = currentVPNIndex >= 0? [VPN_SERVERS[currentVPNIndex]] : (isImage? IMG_PROXIES : API_PROXIES);
+
+  // Kalo udah ada proxy yang work, pake itu terus biar kilat
+  if (isImage && WORKING_IMG_PROXY) {
+    try {
+      const res = await fetch(WORKING_IMG_PROXY + encodeURIComponent(url), { signal: AbortSignal.timeout(5000) });
+      if (res.ok) return res;
+    } catch (e) { WORKING_IMG_PROXY = null; }
+  }
+  if (!isImage && WORKING_API_PROXY) {
+    try {
+      const res = await fetch(WORKING_API_PROXY + encodeURIComponent(url), { signal: AbortSignal.timeout(5000) });
+      if (res.ok) return res;
+    } catch (e) { WORKING_API_PROXY = null; }
+  }
+
+  // Kalo belum ada, cari proxy tercepat
+  for (let i = 0; i < proxyList.length; i++) {
+    const proxyIndex = currentVPNIndex >= 0? 0 : (isImage? i : currentApiProxyIndex + i) % proxyList.length;
+    try {
+      let finalUrl = proxyList[proxyIndex];
+      if (finalUrl.includes('wp.com')) {
+        finalUrl += url.replace(/^https?:\/\//, '');
+      } else if (finalUrl.includes('statically.io')) {
+        finalUrl += url;
+      } else {
+        finalUrl += encodeURIComponent(url);
+      }
+
+      const res = await fetch(finalUrl, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        // SIMPAN PROXY YANG BERHASIL BUAT DIPAKE LAGI
+        if (isImage) WORKING_IMG_PROXY = proxyList[proxyIndex];
+        else WORKING_API_PROXY = proxyList[proxyIndex];
+        if (!isImage && currentVPNIndex < 0) currentApiProxyIndex = proxyIndex;
+        return res;
+      }
+    } catch (e) {}
+  }
+
+  if (currentVPNIndex < 0 &&!isImage) {
+    vpnBox.style.display = 'block';
+    throw new Error('Semua proxy mati. Pilih VPN di atas.');
+  }
+  return null;
+}
+
+async function loadManga(title = '') {
+  try {
+    loader.style.display = 'block';
+    loader.innerText = 'Cari server tercepat...';
+    mangaGrid.innerHTML = '';
+    vpnBox.style.display = 'none';
+
+    let apiUrl = 'https://api.mangadex.org/manga?limit=20&includes[]=cover_art&availableTranslatedLanguage[]=id&availableTranslatedLanguage[]=en&order[followedCount]=desc&contentRating[]=safe&contentRating[]=suggestive';
+    if (title) apiUrl = `https://api.mangadex.org/manga?title=${encodeURIComponent(title)}&limit=20&includes[]=cover_art&availableTranslatedLanguage[]=id&availableTranslatedLanguage[]=en`;
+
+    const res = await fastFetch(apiUrl, false);
+    const data = await res.json();
+    if (!data.data || data.data.length === 0) throw new Error('Manga tidak ditemukan');
+
+    loader.innerText = 'Load cover...';
+    const results = [];
+
+    // SPEED HACK 2: LOAD COVER 5 SEKALIGUS, BUKAN SATU-SATU
+    const promises = data.data.slice(0, 20).map(async (m) => {
+      try {
+        const cover = m.relationships.find(r => r.type === 'cover_art');
+        if (!cover?.attributes?.fileName) return null;
+        const title = m.attributes.title.en || m.attributes.title['ja-ro'] || m.attributes.title.ja || Object.values(m.attributes.title)[0] || 'No Title';
+        const desc = m.attributes.description.en || m.attributes.description.id || '';
+        const coverUrl = `https://uploads.mangadex.org/covers/${m.id}/${cover.attributes.fileName}.256.jpg`;
+
+        // Langsung pake URL proxy, ga convert blob biar cepet
+        let finalCover = 'https://via.placeholder.com/160x220/333/fff?text=Loading';
+        if (WORKING_IMG_PROXY) {
+          finalCover = WORKING_IMG_PROXY + encodeURIComponent(coverUrl);
+        }
+
+        return {
+          id: m.id, title: title, cover: finalCover, desc: desc, coverUrl: coverUrl
+        };
+      } catch (e) { return null; }
+    });
+
+    const mangaList = (await Promise.all(promises)).filter(Boolean);
+    renderManga(mangaList);
+    loader.style.display = 'none';
+    updateStatus(`Loaded ${mangaList.length} manga ${currentVPNIndex>=0?`| VPN ${currentVPNIndex+1}`:''}`);
+  } catch (e) {
+    loader.innerHTML = `<div class="error"><b>KIAMAT</b><br>${e.message}<br><br>Install 1.1.1.1 VPN</div>`;
+  }
+}
+
+function renderManga(list) {
+  mangaGrid.innerHTML = '';
+  list.forEach((m) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${m.cover}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/160x220/333/fff?text=Error'">
+      <h3>${m.title}</h3>
+    `;
+    card.onclick = () => openDetail(m);
+    mangaGrid.appendChild(card);
+  });
+}
+
+async function openDetail(manga) {
+  document.getElementById('detailTitle').innerText = manga.title;
+  document.getElementById('detailModal').style.display = 'block';
+  document.getElementById('detailBody').innerHTML = `
+    <div class="detail-info">
+      <img src="${manga.cover}" referrerpolicy="no-referrer">
+      <div>
+        <p><b>Source:</b> MangaDex ${currentVPNIndex>=0?`| VPN ${currentVPNIndex+1}`:''}</p>
+        <p style="margin-top:10px">${manga.desc? manga.desc.substring(0,300).replace(/<[^>]*>/g, '') + '...' : 'No description'}</p>
+      </div>
+    <div class="chapter-list" id="chapterList"><p>Loading chapter...</p></div>
+  `;
+  await loadChapters(manga.id);
+}
+
+async function loadChapters(mangaId) {
+  try {
+    const url = `https://api.mangadex.org/manga/${mangaId}/feed?translatedLanguage[]=id&translatedLanguage[]=en&order[chapter]=desc&limit=500`;
+    const res = await fastFetch(url, false);
+    const data = await res.json();
+    if (!data.data || data.data.length === 0) throw new Error('No chapter');
+
+    currentChapterList = data.data.map(ch => ({
+      id: ch.id, chapter: ch.attributes.chapter || 'Oneshot',
+      title: ch.attributes.title || '', lang: ch.attributes.translatedLanguage
+    }));
+
+    let chapHtml = '<h3>Pilih Chapter</h3>';
+    currentChapterList.forEach((ch, idx) => {
+      chapHtml += `<div class="chapter-item" onclick="openReader(${idx})">
+        <div>Ch. ${ch.chapter} ${ch.title}</div><span>${ch.lang.toUpperCase()}</span>
+      </div>`;
+    });
+    document.getElementById('chapterList').innerHTML = chapHtml;
+  } catch(e) {
+    document.getElementById('chapterList').innerHTML = '<p>Gagal load chapter.</p>';
+  }
+}
+
+// SPEED HACK 3: LOAD 10 GAMBAR SEKALIGUS + PRELOAD CHAPTER BERIKUTNYA
+async function openReader(index) {
+  currentChapterIndex = index;
+  const ch = currentChapterList[index];
+  document.getElementById('detailModal').style.display = 'none';
+  document.getElementById('readerModal').style.display = 'block';
+  document.getElementById('readerTitle').innerText = `Ch. ${ch.chapter} - ${ch.title}`;
+  document.getElementById('reader').innerHTML = '<p style="padding:40px">Loading kilat...</p>';
+
+  try {
+    const url = `https://api.mangadex.org/at-home/server/${ch.id}`;
+    const res = await fastFetch(url, false);
+    const data = await res.json();
+
+    const pages = data.chapter.dataSaver;
+    const hash = data.chapter.hash;
+    const baseUrl = data.baseUrl;
+
+    // Bikin semua tag img dulu, pake URL proxy langsung
+    let imgHtml = '';
+    for (let i = 0; i < pages.length; i++) {
+      const imgUrl = `${baseUrl}/data-saver/${hash}/${pages[i]}`;
+      const proxiedUrl = WORKING_IMG_PROXY? WORKING_IMG_PROXY + encodeURIComponent(imgUrl) : imgUrl;
+      imgHtml += `<img src="${proxiedUrl}" loading="lazy" referrerpolicy="no-referrer" data-index="${i}">`;
+    }
+    document.getElementById('reader').innerHTML = imgHtml;
+    window.scrollTo(0, 0);
+
+    // SPEED HACK 4: PRELOAD 3 HALAMAN PERTAMA CHAPTER BERIKUTNYA
+    if (preloadEnabled && index < currentChapterList.length - 1) {
+      setTimeout(() => preloadNextChapter(index + 1), 2000);
+    }
+    updateStatus('');
+  } catch(e) {
+    document.getElementById('reader').innerHTML = '<p style="padding:40px">Gagal. Coba VPN lain</p>';
+  }
+}
+
+async function preloadNextChapter(nextIndex) {
+  try {
+    const ch = currentChapterList[nextIndex];
+    const url = `https://api.mangadex.org/at-home/server/${ch.id}`;
+    const res = await fastFetch(url, false);
+    const data = await res.json();
+    // Preload 3 halaman pertama aja
+    for (let i = 0; i < Math.min(3, data.chapter.dataSaver.length); i++) {
+      const imgUrl = `${data.baseUrl}/data-saver/${data.chapter.hash}/${data.chapter.dataSaver[i]}`;
+      const img = new Image();
+      img.src = WORKING_IMG_PROXY? WORKING_IMG_PROXY + encodeURIComponent(imgUrl) : imgUrl;
+    }
+    updateStatus(`Next chapter preloaded`);
+  } catch (e) {}
+}
+
+function prevChapter() { if(currentChapterIndex > 0) openReader(currentChapterIndex - 1); }
+function nextChapter() { if(currentChapterIndex < currentChapterList.length - 1) openReader(currentChapterIndex + 1); }
+function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+function closeReader() { document.getElementById('readerModal').style.display = 'none'; document.getElementById('reader').innerHTML = ''; }
+function backToChapter() { document.getElementById('readerModal').style.display = 'none'; document.getElementById('detailModal').style.display = 'block'; }
+
+document.getElementById('search').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') loadManga(e.target.value);
+});
+
+loadManga();
+</script>
+</body>
+</html>
