@@ -8,30 +8,30 @@
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: Arial, sans-serif; }
     body { background: #0a0a0a; color: #fff; }
     header { background: #1f1f1f; padding: 15px; position: sticky; top: 0; z-index: 100; text-align: center; }
-   .container { max-width: 1200px; margin: auto; padding: 20px; }
-   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
-   .card { background: #1f1f1f; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.2s; position: relative; }
-   .card:hover { transform: scale(1.05); }
-   .card img { width: 100%; height: 220px; object-fit: cover; }
-   .card h3 { font-size: 14px; padding: 8px; height: 50px; overflow: hidden; }
-   .source-tag { font-size: 10px; background: #00c853; padding: 2px 6px; border-radius: 4px; position: absolute; margin: 5px; top: 0; left: 0; }
-   .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-   .tab { padding: 8px 16px; background: #333; border-radius: 20px; cursor: pointer; white-space: nowrap; }
-   .tab.active { background: #ff4500; }
+ .container { max-width: 1200px; margin: auto; padding: 20px; }
+ .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+ .card { background: #1f1f1f; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.2s; position: relative; }
+ .card:hover { transform: scale(1.05); }
+ .card img { width: 100%; height: 220px; object-fit: cover; }
+ .card h3 { font-size: 14px; padding: 8px; height: 50px; overflow: hidden; }
+ .source-tag { font-size: 10px; background: #00c853; padding: 2px 6px; border-radius: 4px; position: absolute; margin: 5px; top: 0; left: 0; }
+ .tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+ .tab { padding: 8px 16px; background: #333; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+ .tab.active { background: #ff4500; }
     #loader { text-align: center; padding: 40px; }
-   .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
-   .modal-content { background: #121212; margin: 20px auto; max-width: 900px; border-radius: 10px; }
-   .modal-header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-   .close { font-size: 30px; cursor: pointer; }
-   .detail-info { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
-   .detail-info img { width: 200px; border-radius: 8px; }
-   .chapter-list { padding: 0 20px 20px; max-height: 300px; overflow-y: auto; }
-   .chapter-item { padding: 12px; background: #1f1f1f; margin-bottom: 8px; border-radius: 5px; cursor: pointer; }
-   .chapter-item:hover { background: #333; }
+ .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); overflow-y: auto; }
+ .modal-content { background: #121212; margin: 20px auto; max-width: 900px; border-radius: 10px; }
+ .modal-header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+ .close { font-size: 30px; cursor: pointer; }
+ .detail-info { display: flex; gap: 20px; padding: 20px; flex-wrap: wrap; }
+ .detail-info img { width: 200px; border-radius: 8px; }
+ .chapter-list { padding: 0 20px 20px; max-height: 300px; overflow-y: auto; }
+ .chapter-item { padding: 12px; background: #1f1f1f; margin-bottom: 8px; border-radius: 5px; cursor: pointer; }
+ .chapter-item:hover { background: #333; }
     #reader { background: #000; padding: 20px 0; text-align: center; }
     #reader img { max-width: 100%; margin-bottom: 5px; }
-   .btn { background: #ff4500; border: none; padding: 10px 20px; border-radius: 5px; color: #fff; cursor: pointer; margin: 5px; }
-   .reader-controls { display: flex; justify-content: center; gap: 10px; padding: 20px; flex-wrap: wrap; position: sticky; top: 0; background: #121212; z-index: 50; }
+ .btn { background: #ff4500; border: none; padding: 10px 20px; border-radius: 5px; color: #fff; cursor: pointer; margin: 5px; }
+ .reader-controls { display: flex; justify-content: center; gap: 10px; padding: 20px; flex-wrap: wrap; position: sticky; top: 0; background: #121212; z-index: 50; }
     #search { width: 100%; padding: 10px; margin-bottom: 20px; background: #333; border: none; border-radius: 5px; color: #fff; }
   </style>
 </head>
@@ -41,7 +41,7 @@
   <div class="container">
     <input type="text" id="search" placeholder="Cari manga...">
     <div class="tabs" id="apiTabs"></div>
-    <div id="loader">Loading manga yang bisa dibaca...</div>
+    <div id="loader">Loading manga...</div>
     <div class="grid" id="mangaGrid"></div>
   </div>
 
@@ -71,42 +71,37 @@
   </div>
 
 <script>
-// CUMA API YANG BISA DIBACA + ADA CHAPTER - 8 API PALING STABIL
+// CUMA 2 API YANG 100% JALAN + ADA CHAPTER
 const APIS = [
   { name: "MangaDex", url: "https://api.mangadex.org/manga?limit=20&includes[]=cover_art&availableTranslatedLanguage[]=id", type: "mangadex" },
-  { name: "MangaFox", url: "https://mangafox-api.vercel.app/popular", type: "mangafox", base: "https://mangafox-api.vercel.app" },
-  { name: "MangaHere", url: "https://manga-here-api.vercel.app/popular", type: "mangahere", base: "https://manga-here-api.vercel.app" },
-  { name: "ReadManga", url: "https://readmanga-api.vercel.app/popular", type: "readmanga", base: "https://readmanga-api.vercel.app" },
-  { name: "AsuraScans", url: "https://asura-api.vercel.app/popular", type: "asura", base: "https://asura-api.vercel.app" },
-  { name: "FlameScans", url: "https://flamescans-api.vercel.app/popular", type: "flame", base: "https://flamescans-api.vercel.app" },
-  { name: "Mangakakalot", url: "https://mangakakalot-api.vercel.app/popular", type: "mangakakalot", base: "https://mangakakalot-api.vercel.app" },
-  { name: "MangaHub", url: "https://mangahub-api.vercel.app/popular", type: "mangahub", base: "https://mangahub-api.vercel.app" }
+  { name: "MangaFox", url: "https://mangafox-api.vercel.app/popular", type: "mangafox", base: "https://mangafox-api.vercel.app" }
 ];
 
-// PROXY 8 LAPIS
+// PROXY 4 LAPIS
 const PROXIES = [
   'https://corsproxy.io/?',
   'https://api.allorigins.win/raw?url=',
   'https://thingproxy.freeboard.io/fetch/',
-  'https://api.codetabs.com/v1/proxy?quest=',
-  'https://yacdn.org/proxy/',
-  'https://cors.bridged.cc/',
-  'https://proxy.cors.sh/',
-  'https://cors-anywhere.herokuapp.com/'
+  'https://api.codetabs.com/v1/proxy?quest='
 ];
 let currentProxyIndex = 0;
 
-async function fetchWithProxy(url) {
+async function fetchWithProxy(url, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
   for (let i = 0; i < PROXIES.length; i++) {
     const proxyIndex = (currentProxyIndex + i) % PROXIES.length;
     try {
-      const res = await fetch(PROXIES[proxyIndex] + encodeURIComponent(url));
+      const res = await fetch(PROXIES[proxyIndex] + encodeURIComponent(url), { signal: controller.signal });
       if (res.ok) {
         currentProxyIndex = proxyIndex;
+        clearTimeout(id);
         return res;
       }
     } catch (e) {}
   }
+  clearTimeout(id);
   throw new Error('Semua proxy gagal');
 }
 
@@ -138,6 +133,7 @@ async function fetchAPI(api) {
     const data = await res.json();
     return parseResponse(data, api);
   } catch (e) {
+    console.log(api.name + ' gagal load');
     return [];
   }
 }
@@ -176,6 +172,7 @@ function parseResponse(data, api) {
 
 async function loadAllAPI() {
   loader.style.display = 'block';
+  loader.innerText = 'Loading manga...';
   mangaGrid.innerHTML = '';
   allManga = [];
   document.querySelectorAll('#apiTabs.tab').forEach(t => t.classList.remove('active'));
@@ -190,6 +187,7 @@ async function loadAllAPI() {
 
 async function loadSingleAPI(index) {
   loader.style.display = 'block';
+  loader.innerText = 'Loading...';
   mangaGrid.innerHTML = '';
   document.querySelectorAll('#apiTabs.tab').forEach(t => t.classList.remove('active'));
   apiTabs.children[index + 1].classList.add('active');
@@ -202,7 +200,7 @@ async function loadSingleAPI(index) {
 function renderManga(list) {
   mangaGrid.innerHTML = '';
   if(list.length === 0) {
-    mangaGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Gagal load. Coba refresh.</p>';
+    mangaGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">Kosong. Coba refresh.</p>';
     return;
   }
   list.forEach((m) => {
@@ -229,7 +227,6 @@ async function openDetail(manga) {
         <p><b>Source:</b> ${manga.source}</p>
         <p style="margin-top:10px">${manga.desc? manga.desc.substring(0,300).replace(/<[^>]*>/g, '') + '...' : 'No description'}</p>
       </div>
-    </div>
     <div class="chapter-list" id="chapterList"><p>Loading chapter...</p></div>
   `;
   await loadChapters(manga);
@@ -237,7 +234,7 @@ async function openDetail(manga) {
 
 async function loadChapters(manga) {
   const api = manga.api;
-  let chapHtml = '<h3>Daftar Chapter</h3>';
+  let chapHtml = '<h3>Daftar Chapter - Klik buat baca</h3>';
   currentChapterList = [];
 
   try {
@@ -264,7 +261,7 @@ async function loadChapters(manga) {
     });
     document.getElementById('chapterList').innerHTML = chapHtml;
   } catch(e) {
-    document.getElementById('chapterList').innerHTML = '<p>Gagal load chapter. API mungkin down.</p>';
+    document.getElementById('chapterList').innerHTML = '<p>Gagal load chapter. Coba manga lain.</p>';
   }
 }
 
@@ -293,8 +290,9 @@ async function openReader(index) {
       });
     }
     document.getElementById('reader').innerHTML = imgHtml;
+    window.scrollTo(0, 0);
   } catch(e) {
-    document.getElementById('reader').innerHTML = '<p style="padding:40px">Gagal load gambar. Coba chapter lain.</p>';
+    document.getElementById('reader').innerHTML = '<p style="padding:40px">Gagal load gambar chapter.</p>';
   }
 }
 
