@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Denz Anime - Full Legal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{background:#0f172a;color:white}
+.scrollbar-hide::-webkit-scrollbar{display:none}
+.scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}
+.line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+</style>
+</head>
+<body>
+
+<div id="app" class="min-h-screen"></div>
+
+<script>
+const API = 'https://api.jikan.moe/v4'
+const app = document.getElementById('app')
+let currentView = 'home'
+let currentData = null
+
+// LocalStorage buat Bookmark & Riwayat
+const getBookmarks = () => JSON.parse(localStorage.getItem('bookmarks') || '[]')
+const toggleBookmark = (anime) => {
+  let bookmarks = getBookmarks()
+  const idx = bookmarks.findIndex(b => b.mal_id === anime.mal_id)
+  if(idx > -1) bookmarks.splice(idx, 1)
+  else bookmarks.push({mal_id: anime.mal_id, title: anime.title, image: anime.images.jpg.large_image_url})
+  localStorage.setItem('bookmarks', JSON.stringify(bookmarks))
+  render()
+}
+const isBookmarked = (id) => getBookmarks().some(b => b.mal_id === id)
+
+const addHistory = (anime, ep=1) => {
+  let history = JSON.parse(localStorage.getItem('history') || '[]')
+  history = history.filter(h => h.mal_id !== anime.mal_id)
+  history.unshift({mal_id: anime.mal_id, title: anime.title, image: anime.images.jpg.large_image_url, ep})
+  history = history.slice(0, 10) 
+  localStorage.setItem('history', JSON.stringify(history))
+}
+const getHistory = () => JSON.parse(localStorage.getItem('history') || '[]')
+
+// Router Simpel
+function navigate(view, data=null){
+  currentView = view
+  currentData = data
+  window.scrollTo(0,0)
+  render()
+}
+
+// Komponen Header
+function Header(){
+  return `
+  <header class="bg-[#1e293b] p-4 sticky top-0 z-20 flex justify-between items-center gap-2">
+    <div class="logo text-2xl font-bold text-[#38bdf8] cursor-pointer" onclick="navigate('home')">DENZ ANIME</div>
+    <div class="flex gap-2">
+      <button onclick="navigate('bookmark')" class="bg-pink-600 px-3 py-1 rounded text-sm hover:bg-pink-700">Bookmark</button>
+      <input id="searchInput" placeholder="Cari Anime... Enter" class="p-2 rounded bg-[#0f172a] w-40 md:w-64 outline-none border-slate-700 focus:border-[#38bdf8]">
+    </div>
+  </header>
+  `
+}
+
+// Halaman Home
+async function HomePage(){
+  app.innerHTML = `${Header()}<div class="container mx-auto p-4"><p class="text-center text-[#38bdf8]">Loading...</p></div>`
+  
+  const res = await fetch(`${API}/top/anime?limit=20`)
+  const {data} = await res.json()
+  const history = getHistory()
+
+  app.innerHTML = `
+  ${Header()}
+  <div class="container mx-auto p-4">
+    ${history.length > 0 ? `
+    <h2 class="text-xl font-bold mb-3">Lanjut Nonton</h2>
+    <div class="flex gap-4 overflow-x-auto pb-3 scrollbar-hide">
+      ${history.map(h=>`
+        <div class="min-w-[140px] cursor-pointer hover:scale-105 transition" onclick="DetailPage(${h.mal_id})">
+          <img src="${h.image}" class="w-full h-48 object-cover rounded-lg">
+          <p class="text-xs mt-1 line-clamp-2">${h.title}</p>
+          <p class="text-xs text-pink-400">Ep ${h.ep}</p>
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
+    <h2 class="text-2xl font-bold mb-4 mt-6">Anime Populer</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      ${data.map(anime=>AnimeCard(anime)).join('')}
+    </div>
+  </div>
+  `
+  addSearchListener()
+}
+
+// Komponen Card
+function AnimeCard(anime){
+  return `
+  <div class="bg-[#1e293b] rounded-xl overflow-hidden cursor-pointer hover:-translate-y-1 transition border border-transparent hover:border-[#38bdf8]" onclick="DetailPage(${anime.mal_id})">
+    <img src="${anime.images.jpg.large_image_url}" class="w-full h-64 object-cover" loading="lazy">
+    <div class="p-3">
+      <h3 class="font-bold text-sm line-clamp-2 h-10">${anime.title}</h3>
+      <p class="text-yellow-400 text-xs mt-1">тнР ${anime.score || '-'}</p>
+      <p class="text-neutral-400 text-xs">${anime.episodes || '?'} Episode</p>
+    </div>
+  </div>
+  `
+}
+
+// Halaman Detail
+async function DetailPage(mal_id){
+  app.innerHTML = `${Header()}<div class="container mx-auto p-4"><p class="text-center text-[#38bdf8]">Loading detail...</p></div>`
+
+  const [detailRes, epRes] = await Promise.all([
+    fetch(`${API}/anime/${mal_id}/full`),
+    fetch(`${API}/anime/${mal_id}/episodes`)
+  ])
+  const {data: anime} = await detailRes.json()
+  const {data: episodes} = await epRes.json()
+  currentData = {anime, episodes}
+
+  app.innerHTML = `
+  ${Header()}
+  <div class="container mx-auto p-4">
+    <div class="flex flex-col md:flex-row gap-6">
+      <img src="${anime.images.jpg.large_image_url}" class="w-full md:w-64 rounded-lg shadow-lg">
+      <div class="flex-1">
+        <div class="flex justify-between items-start gap-4 mb-2">
+          <h1 class="text-2xl font-bold text-[#38bdf8]">${anime.title}</h1>
+          <button onclick='toggleBookmark(${JSON.stringify(anime).replace(/'/g,"&apos;")})' class="px-4 py-2 rounded text-sm font-semibold ${isBookmarked(anime.mal_id) ? 'bg-pink-600 hover:bg-pink-700' : 'bg-[#1e293b] hover:bg-slate-700'}">
+            ${isBookmarked(anime.mal_id) ? 'тЭдя╕П Disukai' : 'ЁЯдН Bookmark'}
+          </button>
+        </div>
+        <p class="text-sm text-neutral-300 mb-4">тнР ${anime.score || '-'} | ЁЯУ║ ${anime.episodes || '?'} Ep | ${anime.status} | ${anime.type}</p>
+        <p class="text-neutral-400 leading-relaxed mb-6">${anime.synopsis || 'Tidak ada sinopsis'}</p>
+        
+        <h2 class="text-xl font-bold mb-3">Daftar Episode</h2>
+        <div class="bg-[#1e293b] rounded-lg p-3 max-h-96 overflow-y-auto">
+          ${episodes.length > 0 ? episodes.map(ep=>`
+            <div class="flex justify-between items-center p-2 border-b border-slate-700 hover:bg-[#334155] cursor-pointer rounded" onclick="WatchPage(${anime.mal_id}, ${ep.mal_id}, '${ep.title.replace(/'/g,"\\'")}')">
+              <span>Ep ${ep.mal_id}: ${ep.title || 'Tanpa Judul'}</span>
+              <span class="text-pink-400 text-sm font-semibold">Nonton Trailer</span>
+            </div>
+          `).join('') : '<p class="text-center text-neutral-400 p-4">Episode tidak tersedia</p>'}
+        </div>
+      </div>
+    </div>
+  </div>
+  `
+  addSearchListener()
+}
+
+// Halaman Nonton - Pake Trailer Resmi YouTube
+async function WatchPage(mal_id, ep_id, ep_title){
+  const anime = currentData.anime
+  addHistory(anime, ep_id)
+
+  // Ambil trailer youtube dari data anime yg udah di fetch
+  const trailerId = anime.trailer?.youtube_id
+  const trailerEmbed = trailerId 
+    ? `<iframe src="https://www.youtube.com/embed/${trailerId}?autoplay=1" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
+    : `<div class="flex flex-col items-center justify-center h-full text-center p-4">
+        <p class="text-4xl mb-2">ЁЯОм</p>
+        <p class="font-semibold">Trailer resmi tidak tersedia</p>
+        <p class="text-sm text-neutral-400 mt-1">Anime ini belum punya trailer di database MyAnimeList</p>
+       </div>`
+
+  app.innerHTML = `
+  ${Header()}
+  <div class="container mx-auto p-4">
+    <h1 class="text-xl md:text-2xl font-bold mb-4">${anime.title} - Ep ${ep_id}: ${ep_title}</h1>
+    
+    <div class="aspect-video bg-black rounded-lg overflow-hidden mb-4 shadow-lg">
+      ${trailerEmbed}
+    </div>
+
+    <div class="flex flex-col md:flex-row justify-between gap-3">
+      <button onclick="DetailPage(${mal_id})" class="bg-[#1e293b] hover:bg-slate-700 px-4 py-2 rounded font-semibold">тмЕя╕П Kembali ke Detail</button>
+      <div class="flex gap-2">
+        <a href="${anime.url}" target="_blank" class="bg-[#1e293b] hover:bg-slate-700 px-4 py-2 rounded text-sm font-semibold">Buka di MAL</a>
+        <a href="https://www.crunchyroll.com/search?from=search&q=${encodeURIComponent(anime.title)}" target="_blank" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded text-sm font-semibold">Nonton Legal di Crunchyroll</a>
+      </div>
+    </div>
+  </div>
+  `
+  addSearchListener()
+}
+
+// Halaman Bookmark
+function BookmarkPage(){
+  const bookmarks = getBookmarks()
+  app.innerHTML = `
+  ${Header()}
+  <div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4">Anime Bookmark</h2>
+    ${bookmarks.length === 0 ? '<p class="text-neutral-400">Belum ada anime di bookmark</p>' : `
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      ${bookmarks.map(b=>`
+        <div class="bg-[#1e293b] rounded-xl overflow-hidden cursor-pointer border-transparent hover:border-pink-500" onclick="DetailPage(${b.mal_id})">
+          <img src="${b.image}" class="w-full h-64 object-cover">
+          <div class="p-3">
+            <h3 class="font-bold text-sm line-clamp-2">${b.title}</h3>
+            <button onclick="event.stopPropagation(); toggleBookmark({mal_id:${b.mal_id}, title:'', images:{jpg:{large_image_url:''}}})" class="text-red-400 text-xs mt-1 hover:underline">Hapus</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    `}
+  </div>
+  `
+  addSearchListener()
+}
+
+// Search
+async function SearchPage(query){
+  app.innerHTML = `${Header()}<div class="container mx-auto p-4"><p class="text-center text-[#38bdf8]">Mencari "${query}"...</p></div>`
+
+  const res = await fetch(`${API}/anime?q=${query}&limit=20`)
+  const {data} = await res.json()
+
+  app.innerHTML = `
+  ${Header()}
+  <div class="container mx-auto p-4">
+    <h2 class="text-2xl font-bold mb-4">Hasil Pencarian: "${query}"</h2>
+    ${data.length === 0 ? '<p class="text-neutral-400">Tidak ditemukan</p>' : `
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      ${data.map(anime=>AnimeCard(anime)).join('')}
+    </div>
+    `}
+  </div>
+  `
+  document.getElementById('searchInput').value = query
+  addSearchListener()
+}
+
+// Event Listener Search
+function addSearchListener(){
+  const input = document.getElementById('searchInput')
+  if(!input) return
+  input.onkeyup = (e) => {
+    if(e.key === 'Enter' && input.value.trim()){
+      navigate('search', input.value.trim())
+    }
+  }
+}
+
+// Render utama
+async function render(){
+  if(currentView === 'home') await HomePage()
+  else if(currentView === 'bookmark') BookmarkPage()
+  else if(currentView === 'search') await SearchPage(currentData)
+}
+
+// Init
+render()
+</script>
+</body>
+</html>
