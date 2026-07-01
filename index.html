@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hananim v13</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+body { background-color: #0E0F14; }
+.loading { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; }
+.hidden { display: none; }
+.server-btn.active { background-color: #2563EB; }
+  </style>
+</head>
+<body class="text-white font-sans min-h-screen pb-24">
+
+  <div id="homePage">
+    <header class="flex items-center gap-2 px-4 pt-4 sticky top-0 bg-[#0E0F14] z-10">
+      <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"><span class="text-black text-xs font-bold">H</span></div>
+      <p class="font-bold text-sm">Hananim v13</p>
+    </header>
+    <div class="mx-4 mt-4 bg-[#1A1B22] rounded-xl flex items-center px-3 py-2 gap-2">
+      <input id="searchInput" placeholder="Cari Anime..." class="bg-transparent outline-none text-sm w-full text-gray-300">
+    </div>
+    <section class="mt-4 px-4">
+      <h2 class="font-bold mb-3">Trending 🔥 <span id="statusApi" class="text-xs text-green-400"></span></h2>
+      <div id="animeList" class="grid grid-cols-2 gap-3 loading"></div>
+    </section>
+  </div>
+
+  <div id="detailPage" class="hidden">
+    <header class="flex items-center gap-3 px-4 pt-4 sticky top-0 bg-[#0E0F14] z-10">
+      <button onclick="backToHome()" class="text-2xl">←</button>
+      <h2 id="detailPageTitle" class="font-bold text-lg truncate">Detail</h2>
+    </header>
+    <div id="detailContent" class="p-4 loading"></div>
+  </div>
+
+<script>
+const KITSU_URL = 'https://kitsu.io/api/edge'; // Data - 100% Aman
+
+// 3 Server Video + 3 Proxy = 9x Peluang Jalan
+const VIDEO_URLS = [
+  'https://api-aniwatch.onrender.com', // 1. Aniwatch
+  'https://anistream-api.vercel.app', // 2. Anistream 
+  'https://hianime-api.vercel.app' // 3. Hianime
+];
+const PROXIES = [
+  '', // 1. Langsung
+  'https://api.allorigins.win/raw?url=', // 2. Allorigins
+  'https://corsproxy.io/?' // 3. Corsproxy.io
+];
+
+let activeVideoUrl = ''; // Simpan server yg lagi jalan biar ga cek ulang
+
+// 1. Fetch Multi-Fallback Super Cepat
+async function apiFetch(url, isVideo = false) {
+  const baseUrls = isVideo? VIDEO_URLS : [KITSU_URL];
+  
+  // Kalo udah nemu server yg jalan, coba itu dulu biar ga lemot
+  const urlsToTry = activeVideoUrl? [activeVideoUrl] : baseUrls;
+
+  for (const base of urlsToTry) {
+    const proxies = isVideo? PROXIES : ['']; // Data ga perlu proxy
+    for (const proxy of proxies) {
+      const fullUrl = proxy + encodeURIComponent(base + url);
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000); // Timeout 3 detik doang biar ga lemot
+        
+        const res = await fetch(fullUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error(res.status);
+        
+        if(isVideo && base!== activeVideoUrl) {
+          activeVideoUrl = base; // Lock server yg berhasil
+          document.getElementById('statusApi').innerText = `| Server: ${new URL(base).hostname}`;
+        }
+        return await res.json();
+      } catch (e) { /* Lanjut server berikutnya */ }
+    }
+  }
+  if(isVideo) alert('Semua server video mati. Nyalain VPN 1.1.1.1 bro');
+  return {data: [], results: [], episodes: [], sources: []};
+}
+
+// 2. UI Helpers - Sama kayak v12
+function showPage(title) {
+  document.getElementById('homePage').classList.add('hidden');
+  document.getElementById('detailPage').classList.remove('hidden');
+  document.getElementById('detailPageTitle').innerText = title;
+}
+function backToHome() {
+  document.getElementById('detailPage').classList.add('hidden');
+  document.getElementById('homePage').classList.remove('hidden');
+  document.getElementById('detailContent').innerHTML = '';
+  loadTrending();
+}
+function renderCards(list) {
+  const el = document.getElementById('animeList');
+  el.classList.remove('loading');
+  if (!list?.length) return el.innerHTML = `<p class="text-gray-500 text-sm col-span-2">Kosong / Semua API Mati</p>`;
+  el.innerHTML = list.map(a => `
+    <div class="cursor-pointer" onclick='openDetail("${a.id}")'>
+      <img src="${a.attributes.posterImage.large}" class="w-full h-[200px] rounded-xl object-cover">
+      <p class="text-sm mt-1 truncate font-semibold">${a.attributes.titles.en_jp || a.attributes.titles.en}</p>
+      <p class="text-xs text-gray-400">Eps ${a.attributes.episodeCount || '?'}</p>
+    </div>`).join('');
+}
+
+// 3. Load Trending
+async function loadTrending() {
+  document.getElementById('animeList').innerHTML = `<div class="w-full h-[240px] bg-[#1A1B22] rounded-xl loading"></div>`;
+  const data = await apiFetch(`/trending/anime?limit=20`);
+  renderCards(data.data);
+}
+
+// 4. Detail + Pilih Server
+async function openDetail(id) {
+  showPage('Loading...');
+  const res = await apiFetch(`/anime/${id}`);
+  const anime = res.data.attributes;
+  
+  document.getElementById('detailContent').innerHTML = `
+    <img src="${anime.posterImage.large}" class="w-full h-56 rounded-2xl object-cover">
+    <h2 class="font-bold text-xl mt-3">${anime.titles.en_jp}</h2>
+    <p class="text-xs text-gray-400 mt-1">Eps: ${anime.episodeCount}</p>
+    <p class="text-sm text-gray-300 mt-3">${anime.synopsis}</p>
+    <button onclick="loadEpisodes('${anime.canonicalTitle}')" class="w-full bg-blue-600 py-2 rounded-lg text-sm mt-4 font-bold">▶️ Nonton [Butuh VPN]</button>
+    <div id="playerBox" class="mt-4 hidden"></div>`;
+}
+
+// 5. Load Eps + Pilih Server Manual
+async function loadEpisodes(title) {
+  document.getElementById('playerBox').classList.remove('hidden');
+  document.getElementById('playerBox').innerHTML = `<p class="loading text-sm">Nyari server tercepat...</p>`;
+  
+  const search = await apiFetch(`/anime/zoro/${encodeURIComponent(title)}?page=1`, true);
+  const animeId = search.results?.[0]?.id;
+  if(!animeId) return document.getElementById('playerBox').innerHTML = `<p class="text-red-500 text-sm">Ga ketemu di semua server</p>`;
+
+  const info = await apiFetch(`/anime/zoro/info?id=${animeId}`, true);
+  
+  let serverBtn = `<div class="flex gap-2 mb-2">Pilih Server: `;
+  ['vidhide', 'megacloud', 'streamtape'].forEach(s => {
+    serverBtn += `<button onclick="playEpisode('${info.episodes[0].id}','${s}')" class="server-btn bg-[#1A1B22] px-2 py-1 rounded text-xs">${s}</button>`;
+  });
+  serverBtn += `</div>`;
+
+  let epsHTML = `<h3 class="font-bold mt-2 mb-2">Pilih Episode</h3><div class="grid grid-cols-5 gap-2 mb-3 max-h-40 overflow-y-auto no-scrollbar">`;
+  info.episodes.forEach(ep => {
+    epsHTML += `<button onclick="playEpisode('${ep.id}')" class="bg-[#1A1B22] active:bg-blue-600 py-2 rounded-lg text-xs">Eps ${ep.number}</button>`;
+  });
+  epsHTML += `</div>${serverBtn}<div id="videoPlayer"></div>`;
+  document.getElementById('playerBox').innerHTML = epsHTML;
+  playEpisode(info.episodes[0].id); // Auto play eps 1 server default
+}
+
+// 6. Play Video
+async function playEpisode(episodeId, server = 'vidhide') {
+  document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.server-btn[onclick*="${server}"]`)?.classList.add('active');
+  
+  document.getElementById('videoPlayer').innerHTML = `<p class="loading text-sm">Loading ${server}...</p>`;
+  const data = await apiFetch(`/anime/zoro/watch?episodeId=${episodeId}&server=${server}`, true);
+  const m3u8 = data.sources?.[0]?.url;
+  if (!m3u8) return document.getElementById('videoPlayer').innerHTML = `<p class="text-red-500 text-sm">Server ${server} kosong. Coba server lain.</p>`;
+  
+  document.getElementById('videoPlayer').innerHTML = `
+    <iframe src="https://player.videasy.net/?url=${encodeURIComponent(m3u8)}" 
+      class="w-full aspect-video rounded-xl" frameborder="0" allowfullscreen>
+    </iframe>`;
+}
+
+// 7. Search
+document.getElementById('searchInput').addEventListener('keydown', async e => {
+  if (e.key === 'Enter') {
+    const q = e.target.value.trim();
+    if (q.length < 2) return;
+    document.getElementById('animeList').innerHTML = `<div class="w-full h-[240px] bg-[#1A1B22] rounded-xl loading"></div>`;
+    const data = await apiFetch(`/anime?filter[text]=${q}&limit=20`);
+    renderCards(data.data);
+  }
+});
+
+loadTrending();
+</script>
+</body>
+</html>
