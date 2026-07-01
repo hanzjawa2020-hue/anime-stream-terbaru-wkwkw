@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hananim v12</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+body { background-color: #0E0F14; }
+.loading { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; }
+.hidden { display: none; }
+  </style>
+</head>
+<body class="text-white font-sans min-h-screen pb-24">
+
+  <!-- HOME -->
+  <div id="homePage">
+    <header class="flex items-center gap-2 px-4 pt-4 sticky top-0 bg-[#0E0F14] z-10">
+      <div class="w-6 h-6 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center"><span class="text-black text-xs font-bold">H</span></div>
+      <p class="font-bold text-sm">Hananim v12</p>
+    </header>
+
+    <div class="mx-4 mt-4 bg-[#1A1B22] rounded-xl flex items-center px-3 py-2 gap-2">
+      <input id="searchInput" placeholder="Cari Anime..." class="bg-transparent outline-none text-sm w-full text-gray-300">
+    </div>
+
+    <section class="mt-4 px-4">
+      <h2 class="font-bold mb-3">Trending 🔥</h2>
+      <div id="animeList" class="grid grid-cols-2 gap-3 loading"></div>
+    </section>
+  </div>
+
+  <!-- DETAIL + PLAYER PAGE -->
+  <div id="detailPage" class="hidden">
+    <header class="flex items-center gap-3 px-4 pt-4 sticky top-0 bg-[#0E0F14] z-10">
+      <button onclick="backToHome()" class="text-2xl">←</button>
+      <h2 id="detailPageTitle" class="font-bold text-lg truncate">Detail</h2>
+    </header>
+    <div id="detailContent" class="p-4 loading"></div>
+  </div>
+
+<script>
+const KITSU_URL = 'https://kitsu.io/api/edge'; // Data - Aman 100%
+const VIDEO_URL = 'https://consumet-api-o5mm.onrender.com'; // Video - Ganti kalo mati
+const PROXY = 'https://api.allorigins.win/raw?url='; // Proxy khusus video
+
+// 1. Fetch Universal
+async function apiFetch(url, isVideo = false) {
+  const base = isVideo? VIDEO_URL : KITSU_URL;
+  const fullUrl = base + url;
+  const urls = isVideo? [fullUrl, PROXY + encodeURIComponent(fullUrl)] : [fullUrl]; // Video aja yg pake proxy fallback
+  
+  for (const u of urls) {
+    try {
+      const res = await fetch(u);
+      if (!res.ok) throw new Error(res.status);
+      return await res.json();
+    } catch (e) { 
+      console.error('Fetch gagal:', u, e);
+    }
+  }
+  if(isVideo) alert('Gagal load video. Nyalain VPN 1.1.1.1 dulu bro');
+  return {data: [], results: [], episodes: [], sources: []};
+}
+
+// 2. UI Helpers
+function showPage(title) {
+  document.getElementById('homePage').classList.add('hidden');
+  document.getElementById('detailPage').classList.remove('hidden');
+  document.getElementById('detailPageTitle').innerText = title;
+}
+function backToHome() {
+  document.getElementById('detailPage').classList.add('hidden');
+  document.getElementById('homePage').classList.remove('hidden');
+  document.getElementById('detailContent').innerHTML = '';
+  loadTrending();
+}
+function renderCards(list) {
+  const el = document.getElementById('animeList');
+  el.classList.remove('loading');
+  if (!list?.length) return el.innerHTML = `<p class="text-gray-500 text-sm col-span-2">Kosong</p>`;
+  el.innerHTML = list.map(a => `
+    <div class="cursor-pointer" onclick='openDetail("${a.id}")'>
+      <img src="${a.attributes.posterImage.large}" class="w-full h-[200px] rounded-xl object-cover">
+      <p class="text-sm mt-1 truncate font-semibold">${a.attributes.titles.en_jp || a.attributes.titles.en}</p>
+      <p class="text-xs text-gray-400">Eps ${a.attributes.episodeCount || '?'}</p>
+    </div>`).join('');
+}
+
+// 3. Load Trending dari Kitsu
+async function loadTrending() {
+  document.getElementById('animeList').innerHTML = `<div class="w-full h-[240px] bg-[#1A1B22] rounded-xl loading"></div>`;
+  const data = await apiFetch(`/trending/anime?limit=20`);
+  renderCards(data.data);
+}
+
+// 4. Detail dari Kitsu + Tombol Nonton
+async function openDetail(id) {
+  showPage('Loading...');
+  const res = await apiFetch(`/anime/${id}`);
+  const anime = res.data.attributes;
+  
+  document.getElementById('detailContent').innerHTML = `
+    <img src="${anime.posterImage.large}" class="w-full h-56 rounded-2xl object-cover">
+    <h2 class="font-bold text-xl mt-3">${anime.titles.en_jp}</h2>
+    <p class="text-xs text-gray-400 mt-1">Eps: ${anime.episodeCount} | Rating: ${anime.averageRating}</p>
+    <p class="text-sm text-gray-300 mt-3">${anime.synopsis}</p>
+    <button onclick="loadEpisodes('${anime.canonicalTitle}')" class="w-full bg-blue-600 py-2 rounded-lg text-sm mt-4 font-bold">▶️ Nonton Eps 1 [Butuh VPN]</button>
+    <div id="playerBox" class="mt-4 hidden"></div>`;
+  document.getElementById('detailPageTitle').innerText = anime.titles.en_jp;
+}
+
+// 5. Cari Video di Consumet pake Judul Kitsu
+async function loadEpisodes(title) {
+  document.getElementById('playerBox').classList.remove('hidden');
+  document.getElementById('playerBox').innerHTML = `<p class="loading text-sm">Mencari di server video...</p>`;
+  
+  const search = await apiFetch(`/anime/zoro/${encodeURIComponent(title)}?page=1`, true);
+  const animeId = search.results?.[0]?.id;
+  if(!animeId) return document.getElementById('playerBox').innerHTML = `<p class="text-red-500 text-sm">Ga ketemu di server video</p>`;
+
+  const info = await apiFetch(`/anime/zoro/info?id=${animeId}`, true);
+  if(!info.episodes?.length) return document.getElementById('playerBox').innerHTML = `<p class="text-red-500 text-sm">Eps kosong</p>`;
+
+  let epsHTML = `<h3 class="font-bold mt-2 mb-2">Pilih Episode</h3><div class="grid grid-cols-5 gap-2 mb-3">`;
+  info.episodes.forEach(ep => {
+    epsHTML += `<button onclick="playEpisode('${ep.id}')" class="bg-[#1A1B22] active:bg-blue-600 py-2 rounded-lg text-xs">Eps ${ep.number}</button>`;
+  });
+  epsHTML += `</div><div id="videoPlayer"></div>`;
+  document.getElementById('playerBox').innerHTML = epsHTML;
+  playEpisode(info.episodes[0].id); // Auto play eps 1
+}
+
+// 6. Play Video + Proxy
+async function playEpisode(episodeId) {
+  document.getElementById('videoPlayer').innerHTML = `<p class="loading text-sm">Loading server...</p>`;
+  const data = await apiFetch(`/anime/zoro/watch?episodeId=${episodeId}&server=vidhide`, true);
+  const m3u8 = data.sources?.find(s => s.quality.includes('p') || s.quality === 'default')?.url;
+  if (!m3u8) return document.getElementById('videoPlayer').innerHTML = `<p class="text-red-500 text-sm">Server kosong. Ganti server.</p>`;
+  
+  const proxyUrl = PROXY + encodeURIComponent(m3u8);
+  
+  document.getElementById('videoPlayer').innerHTML = `
+    <iframe src="https://player.videasy.net/?url=${encodeURIComponent(proxyUrl)}" 
+      class="w-full aspect-video rounded-xl" frameborder="0" allowfullscreen allow="autoplay; encrypted-media">
+    </iframe>`;
+}
+
+// 7. Search Kitsu
+document.getElementById('searchInput').addEventListener('keydown', async e => {
+  if (e.key === 'Enter') {
+    const q = e.target.value.trim();
+    if (q.length < 2) return;
+    document.getElementById('animeList').innerHTML = `<div class="w-full h-[240px] bg-[#1A1B22] rounded-xl loading"></div>`;
+    const data = await apiFetch(`/anime?filter[text]=${q}&limit=20`);
+    renderCards(data.data);
+  }
+});
+
+loadTrending();
+</script>
+</body>
+</html>
