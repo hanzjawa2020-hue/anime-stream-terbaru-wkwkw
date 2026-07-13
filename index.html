@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOURTE Downloader</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+<style>
+body{background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Poppins';padding:20px}
+.container{background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);border-radius:30px;padding:40px;max-width:600px;width:100%;color:#fff}
+input,button{width:100%;padding:18px;border:none;border-radius:15px;margin-top:15px;font-size:16px}
+button{background:linear-gradient(90deg,#ff6b6b,#feca57);color:#fff;font-weight:800;cursor:pointer}
+.result{margin-top:20px;padding:20px;background:rgba(0,0,0,0.2);border-radius:15px;text-align:center}
+a.btn{display:inline-block;margin:5px;padding:12px 20px;background:#667eea;color:#fff;border-radius:10px;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<div class="container">
+<h1 style="text-align:center">FOURTE <span style="color:#feca57">DOWNLOADER</span></h1>
+<input type="text" id="url" placeholder="Tempel link TikTok / YouTube disini">
+<button onclick="go()">DOWNLOAD SEKARANG</button>
+<div id="hasil"></div>
+</div>
+<script>
+async function go(){
+  let url=document.getElementById('url').value; 
+  document.getElementById('hasil').innerHTML="<p>Loading...</p>";
+  
+  // Pake proxy cors.sh biar gak diblokir github
+  let proxy = "https://cors.sh/";
+  
+  try{
+    if(url.includes('tiktok.com')){
+      let res=await fetch(proxy + `https://api.tikwm.com/video/?url=${encodeURIComponent(url)}`);
+      let data=await res.json();
+      if(data.code==0){
+        document.getElementById('hasil').innerHTML=`
+        <div class="result">
+          <img src="${data.data.cover}" width="100%" style="border-radius:15px">
+          <h3>${data.data.title}</h3>
+          <a class="btn" href="${data.data.play}" target="_blank">⬇️ No WM</a>
+          <a class="btn" href="${data.data.music}" target="_blank">🎵 MP3</a>
+        </div>`;
+      }
+    } 
+    else if(url.includes('youtube.com') || url.includes('youtu.be')){
+      // Untuk youtube kita redirect ke cobalt biar aman
+      document.getElementById('hasil').innerHTML=`
+      <div class="result">
+        <h3>✅ Link YouTube Terdeteksi</h3>
+        <p>Klik tombol dibawah untuk download via Cobalt</p>
+        <a class="btn" href="https://cobalt.tools/?url=${encodeURIComponent(url)}" target="_blank">Buka di Cobalt Tools</a>
+      </div>`;
+    }
+    else{document.getElementById('hasil').innerHTML="<p>❌ Link tidak valid</p>"}
+  }catch(e){document.getElementById('hasil').innerHTML="<p>❌ Error. Coba link lain</p>"}
+</script>
+</body>
+</html>
