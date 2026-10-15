@@ -1,1 +1,0 @@
-# baca manga aja
