@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#150a04">
+  <meta name="description" content="OtakuTide — jelajahi anime, update terbaru, detail episode, dan pilihan sumber streaming.">
+  <title>OtakuTide — Anime, Anytime</title>
+  <link rel="preconnect" href="https://www.sankavollerei.web.id" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+  <div class="app-shell">
+    <header class="topbar" id="top">
+      <a class="brand" href="#home" aria-label="OtakuTide beranda">
+        <span class="brand-mark" aria-hidden="true">◉</span>
+        <span>Otaku<span class="brand-accent">Tide</span></span>
+      </a>
+
+      <button class="icon-button mobile-menu-button" id="mobileMenuButton" aria-label="Buka menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+
+      <nav class="main-nav" id="mainNav" aria-label="Navigasi utama">
+        <a class="nav-link active" href="#home" data-nav="home">Home</a>
+        <button class="nav-link nav-dropdown-trigger" id="browseTrigger" type="button" aria-expanded="false">Browse <span class="chevron">⌄</span></button>
+        <a class="nav-link" href="#latest" data-nav="latest">Update</a>
+        <button class="nav-link" type="button" id="sourcesTrigger">Sumber API</button>
+      </nav>
+
+      <div class="top-actions">
+        <form class="search-box" id="searchForm" role="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.6"/><path d="m16 16 4.5 4.5"/></svg>
+          <input id="searchInput" type="search" placeholder="Cari anime..." aria-label="Cari anime" autocomplete="off">
+          <button type="submit" class="search-submit" aria-label="Cari">↵</button>
+        </form>
+        <div class="theme-wrap">
+          <button class="icon-button theme-button" id="themeButton" type="button" aria-label="Ganti tema" title="Tema: Gelap">
+            <svg viewBox="0 0 24 24" id="themeIcon" aria-hidden="true"><path d="M20.2 15.5A8.4 8.4 0 0 1 8.5 3.8 8.4 8.4 0 1 0 20.2 15.5Z"/></svg>
+          </button>
+          <div class="theme-menu" id="themeMenu" hidden>
+            <button type="button" data-theme-choice="dark">● Gelap</button>
+            <button type="button" data-theme-choice="light">☼ Terang</button>
+            <button type="button" data-theme-choice="system">◐ Ikuti sistem</button>
+          </div>
+        </div>
+      </div>
+      <div class="browse-menu" id="browseMenu" hidden>
+        <div class="menu-heading">Jelajahi koleksi</div>
+        <button type="button" data-view="all">Semua anime <span>↗</span></button>
+        <button type="button" data-view="latest">Update terbaru <span>↗</span></button>
+        <button type="button" data-view="watchlist">Watchlist saya <span>♡</span></button>
+        <div class="menu-heading">Pilih sumber</div>
+        <div id="browseSources" class="browse-source-list"></div>
+      </div>
+    </header>
+
+    <main id="home">
+      <section class="hero" id="hero" aria-label="Anime pilihan">
+        <div class="hero-backdrop"></div>
+        <div class="hero-art-wrap"><img id="heroArt" class="hero-art" alt="" fetchpriority="high"></div>
+        <div class="hero-vignette"></div>
+        <button class="hero-arrow hero-prev" id="heroPrev" type="button" aria-label="Anime sebelumnya">‹</button>
+        <button class="hero-arrow hero-next" id="heroNext" type="button" aria-label="Anime berikutnya">›</button>
+        <div class="hero-content" id="heroContent">
+          <div class="eyebrow"><span class="live-dot"></span> ANIME PICKS <span class="eyebrow-divider">/</span> <span id="heroSource">OTAKUTIDE</span></div>
+          <h1 id="heroTitle">Cerita baru menunggumu.</h1>
+          <div class="hero-meta" id="heroMeta"><span>Anime pilihan komunitas</span><span class="meta-dot">•</span><span>Sub Indo</span></div>
+          <p class="hero-description" id="heroDescription">Temukan petualangan berikutnya dari beragam katalog anime.</p>
+          <div class="hero-actions">
+            <button class="primary-button" id="heroWatch" type="button"><span class="play-triangle">▶</span> Mulai Menonton</button>
+            <button class="text-button" id="heroWatchlist" type="button"><span class="plus-icon">＋</span> Watchlist</button>
+          </div>
+          <div class="hero-indicators" id="heroIndicators" aria-label="Pilih anime unggulan"></div>
+        </div>
+        <div class="hero-bottom-fade"></div>
+      </section>
+
+      <div class="content-wrap">
+        <section class="api-notice" id="apiNotice" aria-live="polite">
+          <span class="notice-indicator" id="apiNoticeDot"></span>
+          <span id="apiNoticeText">Menghubungkan ke sumber anime…</span>
+          <button type="button" id="retryButton">Coba lagi</button>
+        </section>
+
+        <section class="shelf-section" id="latestSection">
+          <div class="section-heading">
+            <div><span class="section-kicker">DIPILIH UNTUKMU</span><h2 id="latestTitle">Update terbaru</h2></div>
+            <button class="see-all" type="button" data-view="latest">Lihat semua <span>→</span></button>
+          </div>
+          <div class="shelf" id="latestShelf" aria-live="polite"></div>
+        </section>
+
+        <section class="shelf-section" id="allSection">
+          <div class="section-heading">
+            <div><span class="section-kicker">TEMUKAN DUNIA BARU</span><h2 id="allTitle">Jelajahi anime</h2></div>
+            <div class="section-tools"><label class="visually-hidden" for="sourceFilter">Filter sumber</label><select id="sourceFilter" class="source-filter"><option value="all">Semua sumber</option></select></div>
+          </div>
+          <div class="genre-row" id="genreRow" aria-label="Genre anime"><button type="button" class="genre-chip active" data-genre="">Semua</button><button type="button" class="genre-chip" data-genre="action">Action</button><button type="button" class="genre-chip" data-genre="adventure">Adventure</button><button type="button" class="genre-chip" data-genre="comedy">Comedy</button><button type="button" class="genre-chip" data-genre="fantasy">Fantasy</button><button type="button" class="genre-chip" data-genre="romance">Romance</button></div>
+          <div class="anime-grid" id="animeGrid" aria-live="polite"></div>
+          <div class="load-more-wrap"><button class="outline-button" id="loadMoreButton" type="button">Muat lebih banyak <span>↓</span></button></div>
+        </section>
+
+        <section class="shelf-section" id="sourceSection">
+          <div class="section-heading">
+            <div><span class="section-kicker">KATALOG TERHUBUNG</span><h2>Jelajahi berdasarkan sumber</h2></div>
+          </div>
+          <div class="source-cards" id="sourceCards"></div>
+        </section>
+
+        <section class="shelf-section search-results-section" id="searchSection" hidden>
+          <div class="section-heading"><div><span class="section-kicker">HASIL PENCARIAN</span><h2 id="searchResultsTitle">Hasil pencarian</h2></div><button class="see-all" type="button" id="clearSearch">Tutup <span>×</span></button></div>
+          <div class="anime-grid" id="searchGrid"></div>
+        </section>
+
+        <section class="shelf-section watchlist-section" id="watchlistSection" hidden>
+          <div class="section-heading"><div><span class="section-kicker">DISIMPAN DI PERANGKAT INI</span><h2>Watchlist saya</h2></div></div>
+          <div class="anime-grid" id="watchlistGrid"></div>
+        </section>
+
+        <section class="shelf-section" id="sourceStatusSection">
+          <div class="section-heading"><div><span class="section-kicker">STATUS KONEKSI</span><h2>Status sumber API</h2></div><span class="small-muted">Pembaruan per sesi</span></div>
+          <div class="source-status-grid" id="sourceStatusGrid"></div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <a class="brand footer-brand" href="#home"><span class="brand-mark">◉</span><span>Otaku<span class="brand-accent">Tide</span></span></a>
+      <p>Antarmuka penjelajah anime independen. Metadata dan tautan berasal dari layanan pihak ketiga.</p>
+      <div class="footer-links"><a href="https://www.sankavollerei.web.id/anime/" target="_blank" rel="noopener noreferrer">Dokumentasi API ↗</a><a href="#top">Kembali ke atas ↑</a></div>
+    </footer>
+  </div>
+
+  <nav class="mobile-bottom-nav" aria-label="Navigasi seluler">
+    <a href="#home" class="bottom-nav-item active" data-mobile="home"><span class="nav-icon">⌂</span><span>Home</span></a>
+    <button type="button" class="bottom-nav-item" data-mobile="browse"><span class="nav-icon">▦</span><span>Jelajah</span></button>
+    <button type="button" class="bottom-nav-item" data-mobile="search"><span class="nav-icon">⌕</span><span>Cari</span></button>
+    <button type="button" class="bottom-nav-item" data-mobile="watchlist"><span class="nav-icon">♡</span><span>Disimpan</span></button>
+    <button type="button" class="bottom-nav-item" data-mobile="theme"><span class="nav-icon">◐</span><span>Tema</span></button>
+  </nav>
+
+  <div class="modal-backdrop" id="detailModal" hidden>
+    <section class="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <button class="modal-close" type="button" data-close-modal aria-label="Tutup detail">×</button>
+      <div class="detail-hero" id="detailHero"><img id="detailPoster" alt="" /><div class="detail-hero-shade"></div></div>
+      <div class="detail-body">
+        <div class="detail-source-line" id="detailSourceLine">DETAIL ANIME</div>
+        <h2 id="detailTitle">Memuat detail…</h2>
+        <div class="detail-meta" id="detailMeta"></div>
+        <p class="detail-synopsis" id="detailSynopsis">Mengambil informasi dari API…</p>
+        <div class="detail-actions"><button class="primary-button" id="detailLatestEpisode" type="button"><span class="play-triangle">▶</span> Tonton episode</button><button class="outline-button" id="detailSaveButton" type="button">＋ Watchlist</button><a class="external-link" id="detailSourceLink" target="_blank" rel="noopener noreferrer" hidden>Halaman sumber ↗</a></div>
+        <div class="episodes-heading"><h3>Daftar episode</h3><span id="episodeCount">Memuat…</span></div>
+        <div class="episode-list" id="episodeList"><div class="episode-skeleton"></div><div class="episode-skeleton"></div><div class="episode-skeleton"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop player-backdrop" id="playerModal" hidden>
+    <section class="player-dialog" role="dialog" aria-modal="true" aria-labelledby="playerTitle">
+      <div class="player-topline"><div><span class="section-kicker">OTAKUTIDE PLAYER</span><h2 id="playerTitle">Memuat episode…</h2></div><button class="modal-close player-close" type="button" data-close-player aria-label="Tutup player">×</button></div>
+      <div class="player-frame" id="playerFrame">
+        <div class="player-skeleton" id="playerSkeleton"><div class="player-spinner"></div><div class="player-skeleton-line"></div><span>Menyiapkan player…</span></div>
+      </div>
+      <div class="player-info"><p id="playerMessage">Sedang mengambil pilihan server dari sumber API.</p><div id="serverChoices" class="server-choices"></div></div>
+      <div class="player-disclaimer">Jika video tidak dapat diputar di dalam halaman, coba server lain atau buka tautan sumber. Ketersediaan player bergantung pada penyedia pihak ketiga.</div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js" async></script>
+  <script src="script.js" defer></script>
+</body>
+          </html>
+  
